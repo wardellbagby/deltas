@@ -1,7 +1,8 @@
 package com.wardellbagby.tracks.android.settings
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,16 +15,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.squareup.workflow1.ui.ViewEnvironment
 import com.squareup.workflow1.ui.compose.ComposeScreen
+import com.wardellbagby.tracks.android.BuildConfig
 import com.wardellbagby.tracks.android.R
 import com.wardellbagby.tracks.android.core_ui.ContentPadding
 import com.wardellbagby.tracks.android.core_ui.plus
+import com.wardellbagby.tracks.android.networking.Endpoint.Endpoints
+import com.wardellbagby.tracks.android.networking.Endpoint.Endpoints.Local
+import com.wardellbagby.tracks.android.networking.Endpoint.Endpoints.Production
 
 data class SettingsScreen(
+  val endpoint: Endpoints,
+  val onEndpointChanged: (Endpoints) -> Unit,
   val onLogoutClicked: () -> Unit
 ) : ComposeScreen {
   @Composable
   override fun Content(viewEnvironment: ViewEnvironment) {
-    Box(
+    Column(
       modifier = Modifier.fillMaxSize()
         .padding(
           viewEnvironment[ContentPadding] + PaddingValues(
@@ -32,8 +39,19 @@ data class SettingsScreen(
             bottom = 16.dp
           )
         ),
-      contentAlignment = Alignment.BottomCenter
+      horizontalAlignment = Alignment.CenterHorizontally
     ) {
+      Spacer(Modifier.weight(1f))
+      if (BuildConfig.DEBUG) {
+        Button(
+          modifier = Modifier.fillMaxWidth(),
+          onClick = {
+            onEndpointChanged(if (endpoint == Production) Local else Production)
+          }
+        ) {
+          Text(stringResource(R.string.switch_endpoint))
+        }
+      }
       Button(
         modifier = Modifier.fillMaxWidth(),
         onClick = onLogoutClicked

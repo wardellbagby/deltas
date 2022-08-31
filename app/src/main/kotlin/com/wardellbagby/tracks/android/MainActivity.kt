@@ -6,17 +6,23 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.ViewEnvironment
 import com.squareup.workflow1.ui.compose.WorkflowRendering
 import com.squareup.workflow1.ui.renderWorkflowIn
+import com.wardellbagby.tracks.android.networking.Endpoint
 import com.wardellbagby.tracks.android.theming.AppCompositionRoot
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -30,6 +36,9 @@ class MainActivity : AppCompatActivity() {
   @Inject
   lateinit var activityProvider: ActivityProvider
 
+  @Inject
+  lateinit var endpoint: Endpoint
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
@@ -37,6 +46,16 @@ class MainActivity : AppCompatActivity() {
     // functionality, refactor this to instead use Dagger's "IntoSet" to provide all classes that
     // need to observe the activity's lifecycle.
     lifecycle.addObserver(activityProvider)
+
+    lifecycleScope.launch {
+      lifecycle.repeatOnLifecycle(state = Lifecycle.State.RESUMED) {
+        endpoint.changes
+          .collectLatest {
+            finish()
+            startActivity(intent)
+          }
+      }
+    }
 
     val model: AppViewModel by viewModels()
 

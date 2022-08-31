@@ -74,12 +74,13 @@ object NetworkModule {
 
   @OptIn(ExperimentalSerializationApi::class)
   @Provides
-  fun provideRetrofit(json: Json, client: OkHttpClient): Retrofit = Retrofit.Builder()
-    .baseUrl("https://services.wardell.dev/tracks/")
-    .client(client)
-    .addConverterFactory(json.asConverterFactory(MediaType.get("application/json")))
-    .addCallAdapterFactory(NetworkResultAdapterFactory.create())
-    .build()
+  fun provideRetrofit(json: Json, client: OkHttpClient, endpoint: Endpoint): Retrofit =
+    Retrofit.Builder()
+      .baseUrl(endpoint.current.asBaseUrl)
+      .client(client)
+      .addConverterFactory(json.asConverterFactory(MediaType.get("application/json")))
+      .addCallAdapterFactory(NetworkResultAdapterFactory.create())
+      .build()
 
   @Provides
   fun provideTrackerService(retrofit: Retrofit): TrackerService = retrofit.create()

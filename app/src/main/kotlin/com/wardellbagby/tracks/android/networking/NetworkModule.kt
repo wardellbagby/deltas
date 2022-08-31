@@ -2,6 +2,7 @@ package com.wardellbagby.tracks.android.networking
 
 import com.google.firebase.auth.FirebaseAuth
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.wardellbagby.tracks.android.BuildConfig
 import com.wardellbagby.tracks.android.firebase.notifications.NotificationService
 import com.wardellbagby.tracks.android.friends.FriendsService
 import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
@@ -37,6 +38,14 @@ object NetworkModule {
       .connectTimeout(Duration.ofMinutes(1))
       .readTimeout(Duration.ofMinutes(1))
       .writeTimeout(Duration.ofMinutes(1))
+      .addInterceptor {
+        it.proceed(
+          it.request().newBuilder()
+            .addHeader("Tracks-Client", "Android")
+            .addHeader("Tracks-Client-Version", BuildConfig.VERSION_NAME)
+            .build()
+        )
+      }
       .addInterceptor {
         it.proceed(
           it.request().newBuilder()

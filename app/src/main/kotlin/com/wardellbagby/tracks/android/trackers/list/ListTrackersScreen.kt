@@ -38,6 +38,7 @@ import com.wardellbagby.tracks.android.core_ui.DataRow
 import com.wardellbagby.tracks.android.core_ui.LoadingRowRendering
 import com.wardellbagby.tracks.android.core_ui.LoadingScreen
 import com.wardellbagby.tracks.android.core_ui.StickyHeaderText
+import com.wardellbagby.tracks.android.core_ui.copy
 import com.wardellbagby.tracks.android.times.format
 import com.wardellbagby.tracks.android.trackers.models.Tracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.ElapsedTimeTracker
@@ -86,8 +87,16 @@ data class ListTrackersScreen(
     val grouped = remember(allTrackers) {
       allTrackers.groupBy { it.ownerLabel }
     }
+    // Split padding into padding and LazyColumn's content padding as we want to allow the
+    // LazyColumn to display items underneath the parent's bottom as we scroll but not underneath
+    // the parent's top (since that decides where the sticky headers stop).
+    val padding = viewEnvironment[ContentPadding]
+      .copy(start = 0.dp, end = 0.dp, bottom = 0.dp)
 
-    LazyColumn(contentPadding = viewEnvironment[ContentPadding]) {
+    LazyColumn(
+      contentPadding = viewEnvironment[ContentPadding].copy(top = 0.dp),
+      modifier = Modifier.fillMaxSize().padding(padding)
+    ) {
       grouped.entries.forEachIndexed { groupIndex, (header, trackers) ->
         val isCurrentUsersTrackers = trackers.first().canEdit
 

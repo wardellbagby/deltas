@@ -11,6 +11,10 @@ suspend fun validateUIDsAreFriends(
   selfUID: String,
   ids: List<String>
 ): Boolean {
+  if (ids.isEmpty()) {
+    return true
+  }
+
   database.collection("users")
     .document(selfUID)
     .collection("friends")

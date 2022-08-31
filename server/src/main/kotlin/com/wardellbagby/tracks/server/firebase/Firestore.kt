@@ -18,7 +18,6 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
-import java.lang.Exception
 
 data class ValueWithId<T>(
   val id: String,
@@ -31,13 +30,13 @@ suspend inline fun <reified T> DocumentReference.setCatching(
 ): Result<WriteResult> {
   when (value) {
     is Boolean, is String, is Number ->
-      Result.failure<Nothing>(Exception("Cannot add Java primitives directly to a collection."))
+      Result.failure<Nothing>(Exception("Cannot add Java primitives directly to a document."))
   }
   return runCatching {
     val databaseValue = Json.encodeToJsonElement(value).asPlainType()
 
     if (databaseValue !is Map<*, *>) {
-      return Result.failure(Exception("Cannot add Java primitives directly to a collection."))
+      return Result.failure(Exception("Cannot add Java primitives directly to a document."))
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -18,6 +18,7 @@ import com.wardellbagby.tracks.server.model.ServerTracker
 import com.wardellbagby.tracks.server.routes.getUser
 import com.wardellbagby.tracks.server.routes.safeReceive
 import com.wardellbagby.tracks.utils.nullIfBlank
+import com.wardellbagby.tracks.utils.nullIfEmpty
 import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -31,7 +32,7 @@ val defaultErrorResponse = DefaultServerResponse(
 
 suspend fun List<String>.isAllowedForSharing(oldIds: List<String>, selfUID: String): Boolean {
   return auth.validateUIDs(this) &&
-    validateUIDsAreFriends(selfUID = selfUID, ids = this - oldIds.toSet())
+      validateUIDsAreFriends(selfUID = selfUID, ids = this - oldIds.toSet())
 }
 
 fun Route.updateTrackers() = post("/update") {
@@ -65,6 +66,7 @@ fun Route.updateTrackers() = post("/update") {
     return@post
   }
 
+  val visibleTo = (idsToShareWith ?: tracker.visibleTo)?.distinct()?.nullIfEmpty()
   val updatedTracker: ServerTracker = when (tracker.type) {
     Elapsed -> {
       if (tracker.resetTime == null) {
@@ -75,7 +77,7 @@ fun Route.updateTrackers() = post("/update") {
       ElapsedTracker(
         label = tracker.label,
         creator = tracker.creator,
-        visibleTo = (idsToShareWith ?: tracker.visibleTo)?.distinct(),
+        visibleTo = visibleTo,
         resetTime = if (body.shouldResetTime) {
           Clock.System.now()
         } else {
@@ -93,7 +95,7 @@ fun Route.updateTrackers() = post("/update") {
       IncrementalTracker(
         label = tracker.label,
         creator = tracker.creator,
-        visibleTo = idsToShareWith ?: tracker.visibleTo,
+        visibleTo = visibleTo,
         count = if (body.shouldIncrementCount) {
           tracker.count + 1
         } else {

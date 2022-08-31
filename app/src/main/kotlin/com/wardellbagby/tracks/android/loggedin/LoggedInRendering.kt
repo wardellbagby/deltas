@@ -10,8 +10,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.ViewEnvironment
@@ -39,6 +43,8 @@ enum class Destination {
 
 data class BottomNavigationRendering(
   val wrapped: Screen,
+  val snackbarMessage: String?,
+  val onSnackbarAcknowledged: () -> Unit,
   val currentDestination: Destination,
   val onDestinationChanged: (Destination) -> Unit
 ) : ComposeScreen {
@@ -46,7 +52,16 @@ data class BottomNavigationRendering(
   @OptIn(ExperimentalMaterial3Api::class)
   @Composable
   override fun Content(viewEnvironment: ViewEnvironment) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(snackbarMessage) {
+      if (snackbarMessage != null) {
+        snackbarHostState.showSnackbar(message = snackbarMessage)
+        onSnackbarAcknowledged()
+      }
+    }
     Scaffold(
+      snackbarHost = { SnackbarHost(snackbarHostState) },
       bottomBar = {
         BottomAppBar(actions = {
           NavigationBarItem(

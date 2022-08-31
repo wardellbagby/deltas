@@ -1,8 +1,10 @@
-package com.wardellbagby.tracks.android.firebase
+package com.wardellbagby.tracks.android.firebase.notifications
 
+import android.content.Intent
 import com.google.firebase.messaging.FirebaseMessagingService
-import com.wardellbagby.tracks.models.RegisterNotificationTokenRequest
+import com.google.firebase.messaging.RemoteMessage
 import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
+import com.wardellbagby.tracks.models.RegisterNotificationTokenRequest
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +29,17 @@ class FirebaseNotificationService : FirebaseMessagingService() {
         )
       }
     }
+  }
+
+  override fun onMessageReceived(message: RemoteMessage) {
+    super.onMessageReceived(message)
+
+    val displayableMessage = message.notification?.body ?: return
+
+    sendBroadcast(
+      Intent(TRACKER_CHANGED_ACTION)
+        .putExtra(TRACKER_CHANGED_MESSAGE, displayableMessage),
+    )
   }
 
   override fun onDestroy() {

@@ -1,4 +1,4 @@
-package com.wardellbagby.tracks.android.firebase
+package com.wardellbagby.tracks.android.firebase.notifications
 
 import com.wardellbagby.tracks.android.networking.DefaultNetworkResult
 import com.wardellbagby.tracks.models.RegisterNotificationTokenRequest

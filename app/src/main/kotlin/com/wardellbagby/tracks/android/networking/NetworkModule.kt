@@ -2,7 +2,7 @@ package com.wardellbagby.tracks.android.networking
 
 import com.google.firebase.auth.FirebaseAuth
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import com.wardellbagby.tracks.android.firebase.NotificationService
+import com.wardellbagby.tracks.android.firebase.notifications.NotificationService
 import com.wardellbagby.tracks.android.friends.FriendsService
 import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
 import com.wardellbagby.tracks.android.trackers.TrackerService

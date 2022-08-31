@@ -4,7 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuth.AuthStateListener
 import com.google.firebase.messaging.FirebaseMessaging
 import com.squareup.workflow1.Worker
-import com.wardellbagby.tracks.android.firebase.NotificationService
+import com.wardellbagby.tracks.android.firebase.notifications.NotificationService
 import com.wardellbagby.tracks.models.RegisterNotificationTokenRequest
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow

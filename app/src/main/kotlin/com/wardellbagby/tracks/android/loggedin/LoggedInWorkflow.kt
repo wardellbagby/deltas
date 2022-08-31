@@ -3,17 +3,19 @@ package com.wardellbagby.tracks.android.loggedin
 import android.os.Parcelable
 import com.squareup.workflow1.Snapshot
 import com.squareup.workflow1.StatefulWorkflow
+import com.squareup.workflow1.action
 import com.squareup.workflow1.renderChild
+import com.squareup.workflow1.runningWorker
 import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.toParcelable
 import com.squareup.workflow1.ui.toSnapshot
-import com.wardellbagby.tracks.android.trackers.TrackersWorkflow
 import com.wardellbagby.tracks.android.friends.FriendsWorkflow
 import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State
-import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State.Trackers
 import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State.Friends
 import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State.Settings
+import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State.Trackers
 import com.wardellbagby.tracks.android.settings.SettingsWorkflow
+import com.wardellbagby.tracks.android.trackers.TrackersWorkflow
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
@@ -21,22 +23,39 @@ class LoggedInWorkflow
 @Inject constructor(
   private val trackersWorkflow: TrackersWorkflow,
   private val friendsWorkflow: FriendsWorkflow,
-  private val settingsWorkflow: SettingsWorkflow
+  private val settingsWorkflow: SettingsWorkflow,
+  private val remoteTrackerChangesWorker: RemoteTrackerChangesWorker
 ) : StatefulWorkflow<Unit, State, Nothing, LoggedInRendering>() {
 
   sealed interface State : Parcelable {
-    @Parcelize
-    object Trackers : State
+    val trackerChanged: TrackerChanged?
 
     @Parcelize
-    object Friends : State
+    data class Trackers(
+      override val trackerChanged: TrackerChanged? = null,
+    ) : State
 
     @Parcelize
-    object Settings : State
+    data class Friends(
+      override val trackerChanged: TrackerChanged? = null
+    ) : State
+
+    @Parcelize
+    data class Settings(
+      override val trackerChanged: TrackerChanged? = null
+    ) : State
+
+    fun with(trackerChanged: TrackerChanged?): State {
+      return when (this) {
+        is Friends -> copy(trackerChanged = trackerChanged)
+        is Settings -> copy(trackerChanged = trackerChanged)
+        is Trackers -> copy(trackerChanged = trackerChanged)
+      }
+    }
   }
 
   override fun initialState(props: Unit, snapshot: Snapshot?): State {
-    return snapshot?.toParcelable() ?: Trackers
+    return snapshot?.toParcelable() ?: Trackers()
   }
 
   override fun render(
@@ -44,8 +63,13 @@ class LoggedInWorkflow
     renderState: State,
     context: RenderContext
   ): LoggedInRendering {
+    context.runningWorker(remoteTrackerChangesWorker) {
+      action {
+        state = state.with(trackerChanged = it)
+      }
+    }
     return when (renderState) {
-      Trackers -> {
+      is Trackers -> {
         val rendering = context.renderChild(trackersWorkflow)
         LoggedInRendering(
           screen = rendering.screen.wrapWithBottomNav(renderState, context),
@@ -53,7 +77,7 @@ class LoggedInWorkflow
         )
       }
 
-      Friends -> {
+      is Friends -> {
         val rendering = context.renderChild(friendsWorkflow)
         LoggedInRendering(
           screen = rendering.screen.wrapWithBottomNav(renderState, context),
@@ -61,7 +85,7 @@ class LoggedInWorkflow
         )
       }
 
-      Settings -> LoggedInRendering(
+      is Settings -> LoggedInRendering(
         screen = context.renderChild(settingsWorkflow)
           .wrapWithBottomNav(renderState, context)
       )
@@ -78,12 +102,16 @@ class LoggedInWorkflow
   ): BottomNavigationRendering {
     return BottomNavigationRendering(
       wrapped = this,
+      snackbarMessage = renderState.trackerChanged?.message,
+      onSnackbarAcknowledged = context.eventHandler {
+        state = state.with(trackerChanged = null)
+      },
       currentDestination = renderState.asDestination(),
       onDestinationChanged = context.eventHandler { destination: Destination ->
         state = when (destination) {
-          Destination.Trackers -> Trackers
-          Destination.Friends -> Friends
-          Destination.Settings -> Settings
+          Destination.Trackers -> Trackers(state.trackerChanged)
+          Destination.Friends -> Friends(state.trackerChanged)
+          Destination.Settings -> Settings(state.trackerChanged)
         }
       }
     )
@@ -91,9 +119,9 @@ class LoggedInWorkflow
 
   private fun State.asDestination(): Destination {
     return when (this) {
-      Trackers -> Destination.Trackers
-      Friends -> Destination.Friends
-      Settings -> Destination.Settings
+      is Trackers -> Destination.Trackers
+      is Friends -> Destination.Friends
+      is Settings -> Destination.Settings
     }
   }
 }

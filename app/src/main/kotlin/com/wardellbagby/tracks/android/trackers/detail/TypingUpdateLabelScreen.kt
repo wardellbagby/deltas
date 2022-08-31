@@ -32,6 +32,9 @@ import com.wardellbagby.tracks.models.trackers.TrackerType
 import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
 
+// Yeah, I tweet a lot so...
+private const val MAX_LABEL_LENGTH = 240
+
 data class TypingUpdateLabelScreen(
   val labelTextController: TextController,
   val type: TrackerType,
@@ -64,9 +67,8 @@ data class TypingUpdateLabelScreen(
       Spacer(Modifier.height(16.dp))
       OutlinedTextField(
         value = label,
-        onValueChange = { label = it },
+        onValueChange = { label = it.take(MAX_LABEL_LENGTH) },
         label = { Text(stringResource(R.string.optioanl_label)) },
-        singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
       )
       Spacer(Modifier.height(16.dp))

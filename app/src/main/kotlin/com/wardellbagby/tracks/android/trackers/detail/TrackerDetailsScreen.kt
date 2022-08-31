@@ -79,7 +79,7 @@ data class TrackerDetailsScreen(
     val lazyListState = rememberLazyListState()
     historyRendering.contributeState(lazyListState)
 
-    Column(Modifier.padding(bottom = 16.dp)) {
+    Column {
       LazyColumn(
         Modifier.weight(1f),
         state = lazyListState,

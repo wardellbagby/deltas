@@ -13,9 +13,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.squareup.workflow1.ui.TextController
@@ -24,10 +29,10 @@ import com.squareup.workflow1.ui.compose.ComposeScreen
 import com.squareup.workflow1.ui.compose.asMutableState
 import com.wardellbagby.tracks.android.R
 import com.wardellbagby.tracks.android.core_ui.LabeledRadioButton
+import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
 import com.wardellbagby.tracks.models.trackers.TrackerType
 import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
-import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
 
 data class CreateTrackerScreen(
   val type: TrackerType,
@@ -41,9 +46,18 @@ data class CreateTrackerScreen(
   @Composable
   override fun Content(viewEnvironment: ViewEnvironment) {
     var label by labelTextController.asMutableState()
+    val focusRequester = remember {
+      FocusRequester()
+    }
+    val focusManager = LocalFocusManager.current
 
     BackHandler {
+      focusManager.clearFocus(force = true)
       onBack()
+    }
+
+    LaunchedEffect(Unit) {
+      focusRequester.requestFocus()
     }
 
     Column(
@@ -52,10 +66,11 @@ data class CreateTrackerScreen(
         .padding(16.dp)
     ) {
       OutlinedTextField(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         label = { Text(stringResource(R.string.label)) },
         value = label,
-        onValueChange = { label = it })
+        onValueChange = { label = it }
+      )
 
       Spacer(modifier = Modifier.height(32.dp))
 
@@ -83,7 +98,10 @@ data class CreateTrackerScreen(
       Button(
         modifier = Modifier.fillMaxWidth(),
         enabled = label.isNotNullOrBlank(),
-        onClick = { onSave() }) {
+        onClick = {
+          focusManager.clearFocus(force = true)
+          onSave()
+        }) {
         Text(text = stringResource(R.string.save))
       }
     }

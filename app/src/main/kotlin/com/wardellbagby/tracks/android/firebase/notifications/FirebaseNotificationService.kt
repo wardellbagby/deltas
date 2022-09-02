@@ -1,8 +1,8 @@
 package com.wardellbagby.tracks.android.firebase.notifications
 
-import android.content.Intent
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.wardellbagby.tracks.android.loggedin.RemoteTrackerChangesRepository
 import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
 import com.wardellbagby.tracks.models.RegisterNotificationTokenRequest
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,6 +20,9 @@ class FirebaseNotificationService : FirebaseMessagingService() {
   @Inject
   lateinit var notificationService: NotificationService
 
+  @Inject
+  lateinit var remoteTrackerChangesRepository: RemoteTrackerChangesRepository
+
   override fun onNewToken(token: String) {
     super.onNewToken(token)
     scope.launch {
@@ -34,11 +37,8 @@ class FirebaseNotificationService : FirebaseMessagingService() {
   override fun onMessageReceived(message: RemoteMessage) {
     super.onMessageReceived(message)
 
-    val displayableMessage = message.notification?.body ?: return
-
-    sendBroadcast(
-      Intent(TRACKER_CHANGED_ACTION)
-        .putExtra(TRACKER_CHANGED_MESSAGE, displayableMessage),
+    remoteTrackerChangesRepository.onTrackerChangedRemotely(
+      message = message.notification?.body ?: return
     )
   }
 

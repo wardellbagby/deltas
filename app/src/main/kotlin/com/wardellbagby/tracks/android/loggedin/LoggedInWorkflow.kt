@@ -4,6 +4,7 @@ import android.os.Parcelable
 import com.squareup.workflow1.Snapshot
 import com.squareup.workflow1.StatefulWorkflow
 import com.squareup.workflow1.action
+import com.squareup.workflow1.asWorker
 import com.squareup.workflow1.renderChild
 import com.squareup.workflow1.runningWorker
 import com.squareup.workflow1.ui.Screen
@@ -24,7 +25,7 @@ class LoggedInWorkflow
   private val trackersWorkflow: TrackersWorkflow,
   private val friendsWorkflow: FriendsWorkflow,
   private val settingsWorkflow: SettingsWorkflow,
-  private val remoteTrackerChangesWorker: RemoteTrackerChangesWorker
+  private val remoteTrackerChangesRepository: RemoteTrackerChangesRepository
 ) : StatefulWorkflow<Unit, State, Nothing, LoggedInRendering>() {
 
   sealed interface State : Parcelable {
@@ -63,7 +64,9 @@ class LoggedInWorkflow
     renderState: State,
     context: RenderContext
   ): LoggedInRendering {
-    context.runningWorker(remoteTrackerChangesWorker) {
+    context.runningWorker(
+      worker = remoteTrackerChangesRepository.trackerChanges.asWorker()
+    ) {
       action {
         state = state.with(trackerChanged = it)
       }

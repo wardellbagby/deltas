@@ -34,7 +34,7 @@ fun Route.deleteTracker() = post("/delete") {
     return@post
   }
 
-  trackerRef.delete()
+  database.recursiveDelete(trackerRef)
     .awaitCatching()
     .fold(
       onSuccess = { call.respond(DefaultServerResponse()) },

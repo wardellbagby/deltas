@@ -23,6 +23,12 @@ import com.wardellbagby.tracks.android.networking.Endpoint.Endpoints
 import com.wardellbagby.tracks.android.networking.Endpoint.Endpoints.Local
 import com.wardellbagby.tracks.android.networking.Endpoint.Endpoints.Production
 
+private val Endpoints.next: String
+  get() = when (this) {
+    Production -> Local
+    Local -> Production
+  }.name.lowercase()
+
 data class SettingsScreen(
   val endpoint: Endpoints,
   val onEndpointChanged: (Endpoints) -> Unit,
@@ -49,7 +55,7 @@ data class SettingsScreen(
             onEndpointChanged(if (endpoint == Production) Local else Production)
           }
         ) {
-          Text(stringResource(R.string.switch_endpoint))
+          Text(stringResource(R.string.switch_endpoint, endpoint.next))
         }
       }
       Button(

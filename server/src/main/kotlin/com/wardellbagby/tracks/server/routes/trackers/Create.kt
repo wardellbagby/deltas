@@ -32,7 +32,8 @@ fun Route.createTracker() = post("/create") {
       count = 0,
       label = body.label,
       creator = user.uid,
-      visibleTo = emptyList()
+      visibleTo = emptyList(),
+      timestamp = Clock.System.now()
     )
   }
 

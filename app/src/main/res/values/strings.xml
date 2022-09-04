@@ -42,7 +42,7 @@
   <string name="share">Share</string>
   <string name="show_password_content_description">Show/Hide password</string>
   <string name="sign_in">Sign-In</string>
-  <string name="switch_endpoint">Switch endpoint</string>
+  <string name="switch_endpoint">Switch endpoint to %1$s</string>
   <string name="time_since_reset">Time since last reset</string>
   <string name="total_action_count">Total action count</string>
   <string name="tracker_details_title">Tracker Details</string>

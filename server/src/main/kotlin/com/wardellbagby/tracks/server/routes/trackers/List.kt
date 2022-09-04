@@ -1,6 +1,8 @@
 package com.wardellbagby.tracks.server.routes.trackers
 
+import com.google.cloud.firestore.DocumentReference
 import com.google.cloud.firestore.DocumentSnapshot
+import com.google.cloud.firestore.FieldPath
 import com.google.cloud.firestore.Query.Direction.DESCENDING
 import com.google.firebase.auth.UserRecord
 import com.wardellbagby.tracks.models.trackers.ListTrackersRequest
@@ -48,11 +50,19 @@ suspend fun UserRecord.getOtherTrackers(
   cursorSnapshot: DocumentSnapshot?,
   limit: Int
 ): Result<List<ValueWithId<ServerTracker>>> {
+  @Suppress("UNCHECKED_CAST")
+  val followedTrackers = database.collection("users")
+    .document(uid)
+    .get()
+    .awaitCatching()
+    .getOrNull()
+    ?.get("followedTrackers") as? List<DocumentReference>
+    ?: emptyList()
+
   return database.collection("trackers")
     .orderBy("creator", DESCENDING)
     .orderBy("timestamp", DESCENDING)
-    .whereNotEqualTo("creator", uid)
-    .whereArrayContains("visibleTo", uid)
+    .whereIn(FieldPath.documentId(), followedTrackers)
     .let {
       if (cursorSnapshot != null) {
         it.startAfter(cursorSnapshot)

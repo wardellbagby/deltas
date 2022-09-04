@@ -1,17 +1,24 @@
 package com.wardellbagby.tracks.server.routes.trackers
 
+import com.google.cloud.firestore.DocumentReference
+import com.google.cloud.firestore.FieldValue.arrayRemove
+import com.google.cloud.firestore.FieldValue.arrayUnion
+import com.google.cloud.firestore.SetOptions
 import com.wardellbagby.tracks.models.DefaultServerResponse
 import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
 import com.wardellbagby.tracks.models.trackers.UpdateTrackerRequest
 import com.wardellbagby.tracks.server.firebase.auth
+import com.wardellbagby.tracks.server.firebase.awaitCatching
 import com.wardellbagby.tracks.server.firebase.database
 import com.wardellbagby.tracks.server.firebase.getOrNull
 import com.wardellbagby.tracks.server.firebase.setCatching
 import com.wardellbagby.tracks.server.firebase.validateUIDs
+import com.wardellbagby.tracks.server.helpers.flatMap
 import com.wardellbagby.tracks.server.helpers.pushTrackerHistoryUpdate
 import com.wardellbagby.tracks.server.helpers.sendTrackerUpdateNotifications
 import com.wardellbagby.tracks.server.helpers.validateUIDsAreFriends
+import com.wardellbagby.tracks.server.logger
 import com.wardellbagby.tracks.server.model.ElapsedTracker
 import com.wardellbagby.tracks.server.model.IncrementalTracker
 import com.wardellbagby.tracks.server.model.ServerTracker
@@ -91,24 +98,45 @@ fun Route.updateTrackers() = post("/update") {
         call.respond(defaultErrorResponse)
         return@post
       }
+      val (count, timestamp) = if (body.shouldIncrementCount) {
+        (tracker.count + 1) to Clock.System.now()
+      } else {
+        tracker.count to tracker.timestamp
+      }
 
       IncrementalTracker(
         label = tracker.label,
         creator = tracker.creator,
         visibleTo = visibleTo,
-        count = if (body.shouldIncrementCount) {
-          tracker.count + 1
-        } else {
-          tracker.count
-        }
+        count = count,
+        timestamp = timestamp
       )
     }
   }
 
-  trackerRef.setCatching(updatedTracker)
+  trackerRef
+    .setCatching(updatedTracker)
+    .flatMap {
+      updateCreatedTracker(
+        selfId = user.uid,
+        trackerRef = trackerRef
+      )
+    }
+    .flatMap {
+      updateSharedTracker(
+        old = tracker,
+        new = updatedTracker,
+        trackerRef = trackerRef
+      )
+    }
     .fold(
-      onSuccess = { call.respond(DefaultServerResponse(success = true)) },
-      onFailure = { call.respond(DefaultServerResponse(success = false)) }
+      onSuccess = {
+        call.respond(DefaultServerResponse(success = true))
+      },
+      onFailure = {
+        logger.error("Failed to update tracker", it)
+        call.respond(DefaultServerResponse(success = false))
+      }
     )
 
   if (body.shouldResetTime || body.shouldIncrementCount) {
@@ -120,4 +148,48 @@ fun Route.updateTrackers() = post("/update") {
       label = body.label?.nullIfBlank()
     )
   }
+}
+
+private suspend fun updateCreatedTracker(
+  selfId: String,
+  trackerRef: DocumentReference
+): Result<Unit> {
+  return database.collection("users")
+    .document(selfId)
+    .set(mapOf("createdTrackers" to arrayUnion(trackerRef)), SetOptions.merge())
+    .awaitCatching()
+    .map {
+      println(it)
+    }
+}
+
+private suspend fun updateSharedTracker(
+  old: ServerTracker,
+  new: ServerTracker,
+  trackerRef: DocumentReference,
+): Result<Unit> {
+  val oldVisibleTo = old.visibleTo.orEmpty().toSet()
+  val newVisibleTo = new.visibleTo.orEmpty().toSet()
+
+  val newlyVisibleTo = newVisibleTo - oldVisibleTo
+  val notVisibleTo = oldVisibleTo - newlyVisibleTo
+
+  val writer = database.bulkWriter()
+  newlyVisibleTo.forEach { userId ->
+    writer.set(
+      database.collection("users").document(userId),
+      mapOf("followedTrackers" to arrayUnion(trackerRef)),
+      SetOptions.merge()
+    )
+  }
+
+  notVisibleTo.forEach { userId ->
+    writer.set(
+      database.collection("users").document(userId),
+      mapOf("followedTrackers" to arrayRemove(trackerRef)),
+      SetOptions.merge()
+    )
+  }
+
+  return writer.flush().awaitCatching().map { }
 }

@@ -3,7 +3,6 @@ package com.wardellbagby.tracks.server.model
 import com.wardellbagby.tracks.models.trackers.TrackerType
 import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
-import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
@@ -27,7 +26,7 @@ fun ElapsedTracker(
   type = Elapsed,
   label = label,
   creator = creator,
-  timestamp = Clock.System.now(),
+  timestamp = resetTime,
   visibleTo = visibleTo,
   resetTime = resetTime
 )
@@ -36,12 +35,13 @@ fun IncrementalTracker(
   label: String,
   creator: String,
   visibleTo: List<String>?,
+  timestamp: Instant,
   count: Int
 ) = ServerTracker(
   type = Incremental,
   label = label,
   creator = creator,
-  timestamp = Clock.System.now(),
+  timestamp = timestamp,
   visibleTo = visibleTo,
   count = count
 )

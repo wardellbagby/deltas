@@ -25,6 +25,9 @@ android {
     targetSdk = 33
     versionName = AppVersion.versionName
     versionCode = 1
+
+    resValue("string", "deep_link_scheme", "https")
+    resValue("string", "deep_link_host", "deltas.app")
   }
 
   buildFeatures {

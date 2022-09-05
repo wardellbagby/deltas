@@ -4,6 +4,8 @@ import com.wardellbagby.tracks.android.networking.DefaultNetworkResult
 import com.wardellbagby.tracks.android.networking.NetworkResult
 import com.wardellbagby.tracks.models.trackers.CreateTrackerRequest
 import com.wardellbagby.tracks.models.trackers.DeleteTrackerRequest
+import com.wardellbagby.tracks.models.trackers.GetTrackerRequest
+import com.wardellbagby.tracks.models.trackers.GetTrackerResponse
 import com.wardellbagby.tracks.models.trackers.ListTrackersRequest
 import com.wardellbagby.tracks.models.trackers.ListTrackersResponse
 import com.wardellbagby.tracks.models.trackers.UnsubscribeTrackerRequest
@@ -18,6 +20,11 @@ interface TrackerService {
   suspend fun listTrackers(
     @Body request: ListTrackersRequest
   ): NetworkResult<ListTrackersResponse>
+
+  @POST("tracker/get")
+  suspend fun getTracker(
+    @Body request: GetTrackerRequest
+  ): NetworkResult<GetTrackerResponse>
 
   @POST("tracker/create")
   suspend fun createTracker(

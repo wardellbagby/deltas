@@ -6,6 +6,7 @@ import io.ktor.server.routing.route
 
 fun Route.trackerRoutes() = route("/tracker") {
   createTracker()
+  getTracker()
   listTrackers()
   updateTrackers()
   deleteTracker()

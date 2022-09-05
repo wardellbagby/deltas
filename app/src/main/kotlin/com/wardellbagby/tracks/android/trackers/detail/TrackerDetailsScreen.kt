@@ -34,9 +34,11 @@ import com.wardellbagby.tracks.android.R
 import com.wardellbagby.tracks.android.core_ui.ConfirmButton
 import com.wardellbagby.tracks.android.core_ui.LabeledValue
 import com.wardellbagby.tracks.android.core_ui.StickyHeaderText
+import com.wardellbagby.tracks.android.strings.TextData
 import com.wardellbagby.tracks.android.strings.asTextData
 import com.wardellbagby.tracks.android.times.format
 import com.wardellbagby.tracks.android.trackers.ContributesToTopBar
+import com.wardellbagby.tracks.android.trackers.HasPageTitle
 import com.wardellbagby.tracks.android.trackers.models.Tracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.ElapsedTimeTracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.IncrementalTracker
@@ -59,7 +61,10 @@ data class TrackerDetailsScreen(
   val onDeleteClicked: () -> Unit,
   val onUnsubscribeClicked: () -> Unit,
   val onBack: () -> Unit
-) : ComposeScreen, ContributesToTopBar {
+) : ComposeScreen, ContributesToTopBar, HasPageTitle {
+
+  override val title: TextData
+    get() = tracker.label.asTextData()
 
   override val actions: @Composable RowScope.() -> Unit
     get() = {

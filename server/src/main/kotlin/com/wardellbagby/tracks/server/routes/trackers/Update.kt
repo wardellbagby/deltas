@@ -32,7 +32,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import kotlinx.datetime.Clock
 
-val defaultErrorResponse = DefaultServerResponse(
+private val defaultErrorResponse = DefaultServerResponse(
   success = false,
   errorDetailMessage = "Failed to update tracker"
 )

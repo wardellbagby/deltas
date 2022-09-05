@@ -6,23 +6,18 @@ import com.google.cloud.firestore.Query.Direction.DESCENDING
 import com.google.firebase.auth.UserRecord
 import com.wardellbagby.tracks.models.trackers.ListTrackersRequest
 import com.wardellbagby.tracks.models.trackers.ListTrackersResponse
-import com.wardellbagby.tracks.models.trackers.OwnerDTO
 import com.wardellbagby.tracks.models.trackers.TrackerDTO
-import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
-import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
 import com.wardellbagby.tracks.server.firebase.ValueWithId
-import com.wardellbagby.tracks.server.firebase.auth
 import com.wardellbagby.tracks.server.firebase.awaitCatching
 import com.wardellbagby.tracks.server.firebase.database
 import com.wardellbagby.tracks.server.firebase.getOrEmpty
 import com.wardellbagby.tracks.server.firebase.getOrNull
-import com.wardellbagby.tracks.server.firebase.label
 import com.wardellbagby.tracks.server.helpers.combine
 import com.wardellbagby.tracks.server.helpers.failIfNull
 import com.wardellbagby.tracks.server.helpers.flatMap
-import com.wardellbagby.tracks.server.helpers.getUserAsFriend
 import com.wardellbagby.tracks.server.logger
 import com.wardellbagby.tracks.server.model.ServerTracker
+import com.wardellbagby.tracks.server.model.toDTO
 import com.wardellbagby.tracks.server.routes.getUser
 import com.wardellbagby.tracks.server.routes.safeReceive
 import io.ktor.server.application.call
@@ -161,25 +156,7 @@ fun Route.listTrackers() = post("/list") {
       user.uid == tracker.creator || user.uid in tracker.visibleTo.orEmpty()
     }
     .map { (id, tracker) ->
-      val owner = auth.getUser(tracker.creator)
-      val baseTracker = TrackerDTO(
-        id = id,
-        label = tracker.label,
-        visibleTo = tracker.visibleTo
-          ?.mapNotNull { getUserAsFriend(it) }
-          ?: emptyList(),
-        type = tracker.type,
-        owner = OwnerDTO(
-          label = owner.label,
-          isSelf = owner.uid == user.uid
-        ),
-        visibility = tracker.visibility
-      )
-
-      when (tracker.type) {
-        Incremental -> baseTracker.copy(count = tracker.count)
-        Elapsed -> baseTracker.copy(resetTime = tracker.resetTime)
-      }
+      tracker.toDTO(id, user.uid)
     }
 
   call.respond(

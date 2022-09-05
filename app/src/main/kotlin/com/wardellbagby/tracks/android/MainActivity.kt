@@ -1,5 +1,6 @@
 package com.wardellbagby.tracks.android
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -12,6 +13,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
+import com.squareup.workflow1.RuntimeConfig
 import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.ViewEnvironment
 import com.squareup.workflow1.ui.compose.WorkflowRendering
@@ -20,6 +22,7 @@ import com.wardellbagby.tracks.android.networking.Endpoint
 import com.wardellbagby.tracks.android.theming.AppCompositionRoot
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -39,6 +42,8 @@ class MainActivity : AppCompatActivity() {
   @Inject
   lateinit var endpoint: Endpoint
 
+  private val model: AppViewModel by viewModels()
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
@@ -57,7 +62,7 @@ class MainActivity : AppCompatActivity() {
       }
     }
 
-    val model: AppViewModel by viewModels()
+    model.props.value = intent
 
     setContent {
       val rendering by model.renderings.collectAsState()
@@ -69,6 +74,11 @@ class MainActivity : AppCompatActivity() {
         )
       }
     }
+  }
+
+  override fun onNewIntent(intent: Intent?) {
+    super.onNewIntent(intent)
+    model.props.value = intent
   }
 }
 
@@ -93,11 +103,15 @@ class AppViewModel
   savedState: SavedStateHandle,
   workflow: AppWorkflow
 ) : ViewModel() {
+  val props = MutableStateFlow<Intent?>(null)
   val renderings: StateFlow<Screen> =
     renderWorkflowIn(
       workflow = workflow,
       scope = viewModelScope,
+      props = props,
       savedStateHandle = savedState,
-      interceptors = listOf(DebugWorkflowLoggingInterceptor)
+      interceptors = listOf(DebugWorkflowLoggingInterceptor),
+      runtimeConfig = RuntimeConfig.DEFAULT_CONFIG,
+      onOutput = {}
     )
 }

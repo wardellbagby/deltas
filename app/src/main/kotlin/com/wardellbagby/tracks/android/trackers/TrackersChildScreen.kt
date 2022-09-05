@@ -24,9 +24,13 @@ import com.squareup.workflow1.ui.compose.WorkflowRendering
 import com.wardellbagby.tracks.android.core_ui.ContentPadding
 import com.wardellbagby.tracks.android.strings.TextData
 
-interface ContributesToTopBar : Screen {
+interface ContributesToTopBar {
   val actions: @Composable RowScope.() -> Unit
     get() = {}
+}
+
+interface HasPageTitle {
+  val title: TextData
 }
 
 data class TrackersChildScreen(

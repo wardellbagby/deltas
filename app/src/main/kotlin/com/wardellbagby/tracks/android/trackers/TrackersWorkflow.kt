@@ -15,6 +15,7 @@ import com.wardellbagby.tracks.android.ScreenAndOverlay
 import com.wardellbagby.tracks.android.Toaster
 import com.wardellbagby.tracks.android.asScreenAndOverlay
 import com.wardellbagby.tracks.android.core_ui.LoadingScreen
+import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.ViewTracker
 import com.wardellbagby.tracks.android.networking.NetworkResult
 import com.wardellbagby.tracks.android.strings.asTextData
 import com.wardellbagby.tracks.android.trackers.TrackersWorkflow.State
@@ -40,8 +41,7 @@ class TrackersWorkflow
   private val detailsWorkflow: TrackerDetailsWorkflow,
   private val service: TrackerService,
   private val toaster: Toaster
-) : StatefulWorkflow<Unit, State, Nothing, ScreenAndOverlay>() {
-
+) : StatefulWorkflow<ViewTracker?, State, Nothing, ScreenAndOverlay>() {
   sealed interface State : Parcelable {
 
     @Parcelize
@@ -58,14 +58,17 @@ class TrackersWorkflow
     ) : State
 
     @Parcelize
-    data class Viewing(val tracker: Tracker) : State
+    data class Viewing(
+      val tracker: Tracker? = null,
+      val id: String? = null
+    ) : State
   }
 
-  override fun initialState(props: Unit, snapshot: Snapshot?): State =
+  override fun initialState(props: ViewTracker?, snapshot: Snapshot?): State =
     snapshot?.toParcelable() ?: Listing
 
   override fun render(
-    renderProps: Unit,
+    renderProps: ViewTracker?,
     renderState: State,
     context: RenderContext
   ): ScreenAndOverlay {
@@ -105,12 +108,18 @@ class TrackersWorkflow
 
       is Viewing -> context.renderChild(
         detailsWorkflow,
-        props = TrackerDetailsWorkflow.Props(renderState.tracker)
+        props = if (renderState.tracker != null) {
+          TrackerDetailsWorkflow.Props.FullTracker(renderState.tracker)
+        } else {
+          TrackerDetailsWorkflow.Props.TrackerId(renderState.id!!)
+        }
       ) {
         action { state = Listing }
       }.let {
+        val title = (it.screen as? HasPageTitle)?.title ?: "".asTextData()
+
         TrackersChildScreen(
-          title = renderState.tracker.label.asTextData(),
+          title = title,
           rendering = it.screen,
           onBack = context.eventHandler {
             state = Listing
@@ -150,4 +159,12 @@ class TrackersWorkflow
   }
 
   override fun snapshotState(state: State): Snapshot = state.toSnapshot()
+
+  override fun onPropsChanged(old: ViewTracker?, new: ViewTracker?, state: State): State {
+    return if (new != null) {
+      Viewing(tracker = null, id = new.id)
+    } else {
+      state
+    }
+  }
 }

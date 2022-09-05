@@ -57,4 +57,5 @@
   <string name="unexpected_error">Unexpected error</string>
   <string name="update_tracker">Update tracker</string>
   <string name="what_should_this_track">What should this track?</string>
+  <string name="failed_to_load_tracker">Failed to load tracker</string>
 </resources>

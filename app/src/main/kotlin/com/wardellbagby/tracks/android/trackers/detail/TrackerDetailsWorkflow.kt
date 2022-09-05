@@ -1,7 +1,5 @@
 package com.wardellbagby.tracks.android.trackers.detail
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Parcelable
 import com.squareup.workflow1.Snapshot
 import com.squareup.workflow1.StatefulWorkflow
@@ -13,14 +11,26 @@ import com.squareup.workflow1.ui.ParcelableTextController
 import com.squareup.workflow1.ui.toParcelable
 import com.squareup.workflow1.ui.toSnapshot
 import com.wardellbagby.tracks.android.ActivityProvider
+import com.wardellbagby.tracks.android.R
 import com.wardellbagby.tracks.android.ScreenAndOverlay
 import com.wardellbagby.tracks.android.asScreenAndOverlay
+import com.wardellbagby.tracks.android.core_ui.FailureScreen
 import com.wardellbagby.tracks.android.core_ui.LoadingScreen
 import com.wardellbagby.tracks.android.core_ui.asOverlay
+import com.wardellbagby.tracks.android.deeplinks.DeepLinkCreator
+import com.wardellbagby.tracks.android.networking.NetworkResult.Failure
+import com.wardellbagby.tracks.android.networking.NetworkResult.Success
+import com.wardellbagby.tracks.android.strings.TextData
+import com.wardellbagby.tracks.android.strings.TextData.ResourceText
+import com.wardellbagby.tracks.android.strings.asTextData
 import com.wardellbagby.tracks.android.trackers.TrackerService
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.Props
+import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.Props.FullTracker
+import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.Props.TrackerId
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Deleting
+import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Loading
+import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.LoadingFailure
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Sharing
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.TypingUpdateLabel
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Unsubscribing
@@ -31,8 +41,10 @@ import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrack
 import com.wardellbagby.tracks.android.trackers.models.Tracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.ElapsedTimeTracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.IncrementalTracker
+import com.wardellbagby.tracks.android.trackers.models.asModel
 import com.wardellbagby.tracks.android.trackers.models.type
 import com.wardellbagby.tracks.models.trackers.DeleteTrackerRequest
+import com.wardellbagby.tracks.models.trackers.GetTrackerRequest
 import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Private
 import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Public
 import com.wardellbagby.tracks.models.trackers.UnsubscribeTrackerRequest
@@ -44,12 +56,20 @@ class TrackerDetailsWorkflow
 @Inject constructor(
   private val service: TrackerService,
   private val activityProvider: ActivityProvider,
+  private val deepLinkCreator: DeepLinkCreator,
   private val sharePrivateTrackerWorkflow: SharePrivateTrackerWorkflow,
   private val trackerHistoryWorkflow: ListTrackerHistoryWorkflow
 ) : StatefulWorkflow<Props, State, Unit, ScreenAndOverlay>() {
-  data class Props(
-    val tracker: Tracker
-  )
+
+  sealed interface Props {
+    data class FullTracker(
+      val tracker: Tracker
+    ) : Props
+
+    data class TrackerId(
+      val id: String
+    ) : Props
+  }
 
   @Parcelize
   data class UpdateRequest(
@@ -59,8 +79,8 @@ class TrackerDetailsWorkflow
     val label: String? = null
   ) : Parcelable
 
-  private fun UpdateRequest.toDTO(props: Props) = UpdateTrackerRequest(
-    id = props.tracker.id,
+  private fun UpdateRequest.toDTO(state: State) = UpdateTrackerRequest(
+    id = state.tracker.id,
     shouldResetTime = shouldResetTime,
     shouldIncrementCount = shouldIncrementCount,
     idsToShareWith = idsToShareWith,
@@ -68,29 +88,60 @@ class TrackerDetailsWorkflow
   )
 
   sealed interface State : Parcelable {
-    @Parcelize
-    object Viewing : State
+    val tracker: Tracker
 
     @Parcelize
-    data class Updating(val request: UpdateRequest) : State
+    data class Viewing(
+      override val tracker: Tracker
+    ) : State
 
     @Parcelize
-    object Deleting : State
+    data class Updating(
+      val request: UpdateRequest,
+      override val tracker: Tracker
+    ) : State
 
     @Parcelize
-    object Unsubscribing : State
+    data class Deleting(
+      override val tracker: Tracker
+    ) : State
 
     @Parcelize
-    object Sharing : State
+    data class Unsubscribing(
+      override val tracker: Tracker
+    ) : State
+
+    @Parcelize
+    data class Sharing(
+      override val tracker: Tracker
+    ) : State
 
     @Parcelize
     data class TypingUpdateLabel(
-      val labelTextController: ParcelableTextController = ParcelableTextController()
+      val labelTextController: ParcelableTextController = ParcelableTextController(),
+      override val tracker: Tracker
     ) : State
+
+    @Parcelize
+    data class Loading(val id: String) : State {
+      override val tracker: Tracker
+        get() = error("Loading state has no tracker")
+    }
+
+    @Parcelize
+    data class LoadingFailure(
+      val message: TextData
+    ) : State {
+      override val tracker: Tracker
+        get() = error("Loading state has no tracker")
+    }
   }
 
   override fun initialState(props: Props, snapshot: Snapshot?): State {
-    return snapshot?.toParcelable() ?: Viewing
+    return snapshot?.toParcelable() ?: when (props) {
+      is FullTracker -> Viewing(props.tracker)
+      is TrackerId -> Loading(props.id)
+    }
   }
 
   override fun render(
@@ -99,9 +150,38 @@ class TrackerDetailsWorkflow
     context: RenderContext
   ): ScreenAndOverlay {
     return when (renderState) {
+      is Loading -> {
+        context.runningWorker(
+          Worker.from {
+            service.getTracker(
+              GetTrackerRequest(
+                id = renderState.id
+              )
+            )
+          }
+        ) {
+          when (it) {
+            is Failure -> action {
+              state = LoadingFailure(
+                it.message?.asTextData() ?: ResourceText(R.string.failed_to_load_tracker)
+              )
+            }
+
+            is Success -> action {
+              state = Viewing(it.response.tracker!!.asModel())
+            }
+          }
+        }
+        LoadingScreen.asScreenAndOverlay()
+      }
+
+      is LoadingFailure ->
+        FailureScreen(message = renderState.message)
+          .asScreenAndOverlay()
+
       is Updating -> {
         context.runningWorker(Worker.from {
-          service.updateTracker(renderState.request.toDTO(renderProps))
+          service.updateTracker(renderState.request.toDTO(renderState))
         }) {
           action { setOutput(Unit) }
         }
@@ -110,7 +190,7 @@ class TrackerDetailsWorkflow
 
       is Deleting -> {
         context.runningWorker(Worker.from {
-          service.deleteTracker(DeleteTrackerRequest(id = renderProps.tracker.id))
+          service.deleteTracker(DeleteTrackerRequest(id = renderState.tracker.id))
         }) {
           action { setOutput(Unit) }
         }
@@ -119,7 +199,7 @@ class TrackerDetailsWorkflow
 
       is Unsubscribing -> {
         context.runningWorker(Worker.from {
-          service.unsubscribeTracker(UnsubscribeTrackerRequest(id = renderProps.tracker.id))
+          service.unsubscribeTracker(UnsubscribeTrackerRequest(id = renderState.tracker.id))
         }) {
           action { setOutput(Unit) }
         }
@@ -127,10 +207,10 @@ class TrackerDetailsWorkflow
       }
 
       is Sharing -> {
-        when (renderProps.tracker.visibility) {
+        when (renderState.tracker.visibility) {
           Private -> context.renderChild(
             sharePrivateTrackerWorkflow,
-            props = renderProps.tracker
+            props = renderState.tracker
           ) {
             action { setOutput(Unit) }
           }
@@ -139,28 +219,25 @@ class TrackerDetailsWorkflow
             context.runningWorker(
               Worker.from {
                 activityProvider.activity?.startActivity(
-                  Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, renderProps.tracker.asDeepLink())
-                  }
+                  deepLinkCreator.createShareTrackerIntent(renderState.tracker)
                 )
               }) {
               action {
-                state = Viewing
+                state = Viewing(state.tracker)
               }
             }
 
-            trackerDetailScreen(renderProps, context)
+            trackerDetailScreen(renderState, context)
           }
         }
       }
 
       is TypingUpdateLabel -> {
         TrackerDetailsScreen(
-          tracker = renderProps.tracker,
+          tracker = renderState.tracker,
           historyRendering = context.renderChild(
             trackerHistoryWorkflow,
-            props = renderProps.tracker.id
+            props = renderState.tracker.id
           ),
           onShareClicked = {},
           onIncrementClicked = {},
@@ -171,50 +248,51 @@ class TrackerDetailsWorkflow
         ).asScreenAndOverlay(
           TypingUpdateLabelScreen(
             labelTextController = renderState.labelTextController,
-            type = renderProps.tracker.type,
+            type = renderState.tracker.type,
             onBack = context.eventHandler {
-              state = Viewing
+              state = Viewing(state.tracker)
             },
             onUpdateClicked = context.eventHandler {
               val currentState = state as? TypingUpdateLabel ?: return@eventHandler
 
               state = Updating(
                 UpdateRequest(
-                  shouldResetTime = props.tracker is ElapsedTimeTracker,
-                  shouldIncrementCount = props.tracker is IncrementalTracker,
+                  shouldResetTime = state.tracker is ElapsedTimeTracker,
+                  shouldIncrementCount = state.tracker is IncrementalTracker,
                   label = currentState.labelTextController.textValue
-                )
+                ),
+                tracker = state.tracker
               )
             }
           ).asOverlay()
         )
       }
 
-      Viewing -> trackerDetailScreen(renderProps, context)
+      is Viewing -> trackerDetailScreen(renderState, context)
     }
   }
 
-  private fun trackerDetailScreen(renderProps: Props, context: RenderContext): ScreenAndOverlay {
+  private fun trackerDetailScreen(renderState: State, context: RenderContext): ScreenAndOverlay {
     return TrackerDetailsScreen(
-      tracker = renderProps.tracker,
+      tracker = renderState.tracker,
       historyRendering = context.renderChild(
         trackerHistoryWorkflow,
-        props = renderProps.tracker.id
+        props = renderState.tracker.id
       ),
       onShareClicked = context.eventHandler {
-        state = Sharing
+        state = Sharing(state.tracker)
       },
       onIncrementClicked = context.eventHandler {
-        state = TypingUpdateLabel()
+        state = TypingUpdateLabel(tracker = state.tracker)
       },
       onResetTimeClicked = context.eventHandler {
-        state = TypingUpdateLabel()
+        state = TypingUpdateLabel(tracker = state.tracker)
       },
       onDeleteClicked = context.eventHandler {
-        state = Deleting
+        state = Deleting(tracker = state.tracker)
       },
       onUnsubscribeClicked = context.eventHandler {
-        state = Unsubscribing
+        state = Unsubscribing(tracker = state.tracker)
       },
       onBack = context.eventHandler {
         setOutput(Unit)
@@ -223,8 +301,4 @@ class TrackerDetailsWorkflow
   }
 
   override fun snapshotState(state: State) = state.toSnapshot()
-
-  private fun Tracker.asDeepLink(): String {
-    return Uri.fromParts("tracks", "view/$id", null).toString()
-  }
 }

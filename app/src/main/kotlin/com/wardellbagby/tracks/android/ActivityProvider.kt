@@ -39,6 +39,8 @@ class ActivityProvider
   }
 
   override fun onDestroy(owner: LifecycleOwner) {
-    activity = null
+    if (activity == owner as? ComponentActivity) {
+      activity = null
+    }
   }
 }

@@ -2,7 +2,7 @@
 <resources>
   <string name="add">Add</string>
   <string name="add_new_friend">Add new friend</string>
-  <string name="app_name">Tracks</string>
+  <string name="app_name">Deltas</string>
   <string name="confirm_delete_tracker">Confirm deleting tracker?</string>
   <string name="confirm_remove_tracker">Confirm removing tracker?</string>
   <string name="create_account">Create Account</string>

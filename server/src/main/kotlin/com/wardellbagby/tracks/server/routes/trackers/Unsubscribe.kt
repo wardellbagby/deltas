@@ -1,12 +1,13 @@
 package com.wardellbagby.tracks.server.routes.trackers
 
-import com.google.cloud.firestore.FieldValue
+import com.google.cloud.firestore.FieldValue.arrayRemove
 import com.wardellbagby.tracks.models.DefaultServerResponse
 import com.wardellbagby.tracks.models.trackers.UnsubscribeTrackerRequest
 import com.wardellbagby.tracks.server.firebase.awaitCatching
 import com.wardellbagby.tracks.server.firebase.database
 import com.wardellbagby.tracks.server.firebase.getOrNull
 import com.wardellbagby.tracks.server.helpers.failIfNull
+import com.wardellbagby.tracks.server.helpers.flatMap
 import com.wardellbagby.tracks.server.model.ServerTracker
 import com.wardellbagby.tracks.server.routes.getUser
 import com.wardellbagby.tracks.server.routes.safeReceive
@@ -37,8 +38,14 @@ fun Route.unsubscribeTracker() = post("/unsubscribe") {
   }
 
   trackerRef
-    .update("visibleTo", FieldValue.arrayRemove(user.uid))
+    .update("visibleTo", arrayRemove(user.uid))
     .awaitCatching()
+    .flatMap {
+      database.collection("users")
+        .document(user.uid)
+        .set(mapOf("followedTrackers" to arrayRemove(body.id)))
+        .awaitCatching()
+    }
     .fold(
       onSuccess = { call.respond(DefaultServerResponse()) },
       onFailure = { call.respond(DefaultServerResponse(success = false)) }

@@ -14,27 +14,27 @@ import com.wardellbagby.tracks.android.ScreenAndOverlay
 import com.wardellbagby.tracks.android.asScreenAndOverlay
 import com.wardellbagby.tracks.android.core_ui.FailureScreen
 import com.wardellbagby.tracks.android.core_ui.LoadingScreen
-import com.wardellbagby.tracks.android.trackers.TrackerService
-import com.wardellbagby.tracks.android.trackers.detail.sharing.ShareTrackerWorkflow.State
-import com.wardellbagby.tracks.android.trackers.detail.sharing.ShareTrackerWorkflow.State.AddingFriend
-import com.wardellbagby.tracks.android.trackers.detail.sharing.ShareTrackerWorkflow.State.ChoosingFriends
-import com.wardellbagby.tracks.android.trackers.detail.sharing.ShareTrackerWorkflow.State.Failure
-import com.wardellbagby.tracks.android.trackers.detail.sharing.ShareTrackerWorkflow.State.LoadingFriends
-import com.wardellbagby.tracks.android.trackers.detail.sharing.ShareTrackerWorkflow.State.Sharing
-import com.wardellbagby.tracks.android.trackers.models.Tracker
 import com.wardellbagby.tracks.android.friends.Friend
 import com.wardellbagby.tracks.android.friends.FriendsService
 import com.wardellbagby.tracks.android.friends.add.AddFriendWorkflow
 import com.wardellbagby.tracks.android.friends.toModels
-import com.wardellbagby.tracks.models.trackers.UpdateTrackerRequest
 import com.wardellbagby.tracks.android.networking.NetworkResult
 import com.wardellbagby.tracks.android.networking.mapResponse
 import com.wardellbagby.tracks.android.strings.TextData
 import com.wardellbagby.tracks.android.strings.asTextData
+import com.wardellbagby.tracks.android.trackers.TrackerService
+import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrackerWorkflow.State
+import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrackerWorkflow.State.AddingFriend
+import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrackerWorkflow.State.ChoosingFriends
+import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrackerWorkflow.State.Failure
+import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrackerWorkflow.State.LoadingFriends
+import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrackerWorkflow.State.Sharing
+import com.wardellbagby.tracks.android.trackers.models.Tracker
+import com.wardellbagby.tracks.models.trackers.UpdateTrackerRequest
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
-class ShareTrackerWorkflow
+class SharePrivateTrackerWorkflow
 @Inject constructor(
   private val friendsService: FriendsService,
   private val trackerService: TrackerService,

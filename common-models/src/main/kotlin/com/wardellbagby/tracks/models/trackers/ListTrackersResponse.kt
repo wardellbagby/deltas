@@ -19,7 +19,8 @@ data class TrackerDTO(
   val resetTime: Instant? = null,
   val count: Int? = null,
   val owner: OwnerDTO,
-  val visibleTo: List<FriendDTO>
+  val visibleTo: List<FriendDTO>,
+  val visibility: TrackerVisibility
 )
 
 @Serializable

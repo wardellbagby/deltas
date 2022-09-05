@@ -85,6 +85,7 @@ fun Route.updateTrackers() = post("/update") {
         label = tracker.label,
         creator = tracker.creator,
         visibleTo = visibleTo,
+        visibility = tracker.visibility,
         resetTime = if (body.shouldResetTime) {
           Clock.System.now()
         } else {
@@ -108,6 +109,7 @@ fun Route.updateTrackers() = post("/update") {
         label = tracker.label,
         creator = tracker.creator,
         visibleTo = visibleTo,
+        visibility = tracker.visibility,
         count = count,
         timestamp = timestamp
       )

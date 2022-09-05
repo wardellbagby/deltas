@@ -1,14 +1,18 @@
 package com.wardellbagby.tracks.android.trackers.detail
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Parcelable
 import com.squareup.workflow1.Snapshot
 import com.squareup.workflow1.StatefulWorkflow
 import com.squareup.workflow1.Worker
 import com.squareup.workflow1.action
+import com.squareup.workflow1.renderChild
 import com.squareup.workflow1.runningWorker
 import com.squareup.workflow1.ui.ParcelableTextController
 import com.squareup.workflow1.ui.toParcelable
 import com.squareup.workflow1.ui.toSnapshot
+import com.wardellbagby.tracks.android.ActivityProvider
 import com.wardellbagby.tracks.android.ScreenAndOverlay
 import com.wardellbagby.tracks.android.asScreenAndOverlay
 import com.wardellbagby.tracks.android.core_ui.LoadingScreen
@@ -23,22 +27,24 @@ import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.St
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Updating
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Viewing
 import com.wardellbagby.tracks.android.trackers.detail.history.ListTrackerHistoryWorkflow
-import com.wardellbagby.tracks.android.trackers.detail.sharing.ShareTrackerWorkflow
+import com.wardellbagby.tracks.android.trackers.detail.sharing.SharePrivateTrackerWorkflow
 import com.wardellbagby.tracks.android.trackers.models.Tracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.ElapsedTimeTracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.IncrementalTracker
 import com.wardellbagby.tracks.android.trackers.models.type
 import com.wardellbagby.tracks.models.trackers.DeleteTrackerRequest
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Private
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Public
 import com.wardellbagby.tracks.models.trackers.UnsubscribeTrackerRequest
 import com.wardellbagby.tracks.models.trackers.UpdateTrackerRequest
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
-import com.squareup.workflow1.renderChild
 
 class TrackerDetailsWorkflow
 @Inject constructor(
   private val service: TrackerService,
-  private val shareTrackerWorkflow: ShareTrackerWorkflow,
+  private val activityProvider: ActivityProvider,
+  private val sharePrivateTrackerWorkflow: SharePrivateTrackerWorkflow,
   private val trackerHistoryWorkflow: ListTrackerHistoryWorkflow
 ) : StatefulWorkflow<Props, State, Unit, ScreenAndOverlay>() {
   data class Props(
@@ -120,11 +126,33 @@ class TrackerDetailsWorkflow
         LoadingScreen.asScreenAndOverlay()
       }
 
-      is Sharing -> context.renderChild(
-        shareTrackerWorkflow,
-        props = renderProps.tracker
-      ) {
-        action { setOutput(Unit) }
+      is Sharing -> {
+        when (renderProps.tracker.visibility) {
+          Private -> context.renderChild(
+            sharePrivateTrackerWorkflow,
+            props = renderProps.tracker
+          ) {
+            action { setOutput(Unit) }
+          }
+
+          Public -> {
+            context.runningWorker(
+              Worker.from {
+                activityProvider.activity?.startActivity(
+                  Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, renderProps.tracker.asDeepLink())
+                  }
+                )
+              }) {
+              action {
+                state = Viewing
+              }
+            }
+
+            trackerDetailScreen(renderProps, context)
+          }
+        }
       }
 
       is TypingUpdateLabel -> {
@@ -162,33 +190,41 @@ class TrackerDetailsWorkflow
         )
       }
 
-      Viewing -> TrackerDetailsScreen(
-        tracker = renderProps.tracker,
-        historyRendering = context.renderChild(
-          trackerHistoryWorkflow,
-          props = renderProps.tracker.id
-        ),
-        onShareClicked = context.eventHandler {
-          state = Sharing
-        },
-        onIncrementClicked = context.eventHandler {
-          state = TypingUpdateLabel()
-        },
-        onResetTimeClicked = context.eventHandler {
-          state = TypingUpdateLabel()
-        },
-        onDeleteClicked = context.eventHandler {
-          state = Deleting
-        },
-        onUnsubscribeClicked = context.eventHandler {
-          state = Unsubscribing
-        },
-        onBack = context.eventHandler {
-          setOutput(Unit)
-        }
-      ).asScreenAndOverlay()
+      Viewing -> trackerDetailScreen(renderProps, context)
     }
   }
 
+  private fun trackerDetailScreen(renderProps: Props, context: RenderContext): ScreenAndOverlay {
+    return TrackerDetailsScreen(
+      tracker = renderProps.tracker,
+      historyRendering = context.renderChild(
+        trackerHistoryWorkflow,
+        props = renderProps.tracker.id
+      ),
+      onShareClicked = context.eventHandler {
+        state = Sharing
+      },
+      onIncrementClicked = context.eventHandler {
+        state = TypingUpdateLabel()
+      },
+      onResetTimeClicked = context.eventHandler {
+        state = TypingUpdateLabel()
+      },
+      onDeleteClicked = context.eventHandler {
+        state = Deleting
+      },
+      onUnsubscribeClicked = context.eventHandler {
+        state = Unsubscribing
+      },
+      onBack = context.eventHandler {
+        setOutput(Unit)
+      }
+    ).asScreenAndOverlay()
+  }
+
   override fun snapshotState(state: State) = state.toSnapshot()
+
+  private fun Tracker.asDeepLink(): String {
+    return Uri.fromParts("tracks", "view/$id", null).toString()
+  }
 }

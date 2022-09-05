@@ -9,6 +9,7 @@ import com.wardellbagby.tracks.models.trackers.TrackerDTO
 import com.wardellbagby.tracks.models.trackers.TrackerType
 import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility
 import kotlinx.datetime.toJavaInstant
 import kotlinx.parcelize.Parcelize
 import java.time.Instant
@@ -19,6 +20,7 @@ sealed interface Tracker : Parcelable {
   val ownerLabel: String
   val canEdit: Boolean
   val visibleTo: List<Friend>
+  val visibility: TrackerVisibility
 
   @Parcelize
   data class ElapsedTimeTracker(
@@ -27,6 +29,7 @@ sealed interface Tracker : Parcelable {
     override val ownerLabel: String,
     override val canEdit: Boolean,
     override val visibleTo: List<Friend>,
+    override val visibility: TrackerVisibility,
     // We use Java Instant here because it's serializable
     val resetTime: Instant
   ) : Tracker
@@ -38,6 +41,7 @@ sealed interface Tracker : Parcelable {
     override val ownerLabel: String,
     override val canEdit: Boolean,
     override val visibleTo: List<Friend>,
+    override val visibility: TrackerVisibility,
     val count: UInt
   ) : Tracker
 }
@@ -56,7 +60,8 @@ fun TrackerDTO.asModel(): Tracker {
       resetTime = resetTime!!.toJavaInstant(),
       ownerLabel = owner.label,
       canEdit = owner.isSelf,
-      visibleTo = visibleTo.toModels()
+      visibleTo = visibleTo.toModels(),
+      visibility = visibility
     )
 
     Incremental -> IncrementalTracker(
@@ -65,7 +70,8 @@ fun TrackerDTO.asModel(): Tracker {
       count = count!!.toUInt(),
       ownerLabel = owner.label,
       canEdit = owner.isSelf,
-      visibleTo = visibleTo.toModels()
+      visibleTo = visibleTo.toModels(),
+      visibility = visibility
     )
   }
 }

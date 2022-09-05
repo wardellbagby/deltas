@@ -2,7 +2,6 @@ package com.wardellbagby.tracks.server.routes.trackers
 
 import com.google.cloud.firestore.DocumentReference
 import com.google.cloud.firestore.DocumentSnapshot
-import com.google.cloud.firestore.FieldPath
 import com.google.cloud.firestore.Query.Direction.DESCENDING
 import com.google.firebase.auth.UserRecord
 import com.wardellbagby.tracks.models.trackers.ListTrackersRequest
@@ -16,7 +15,10 @@ import com.wardellbagby.tracks.server.firebase.auth
 import com.wardellbagby.tracks.server.firebase.awaitCatching
 import com.wardellbagby.tracks.server.firebase.database
 import com.wardellbagby.tracks.server.firebase.getOrEmpty
+import com.wardellbagby.tracks.server.firebase.getOrNull
 import com.wardellbagby.tracks.server.firebase.label
+import com.wardellbagby.tracks.server.helpers.combine
+import com.wardellbagby.tracks.server.helpers.failIfNull
 import com.wardellbagby.tracks.server.helpers.flatMap
 import com.wardellbagby.tracks.server.helpers.getUserAsFriend
 import com.wardellbagby.tracks.server.logger
@@ -59,19 +61,39 @@ suspend fun UserRecord.getOtherTrackers(
     ?.get("followedTrackers") as? List<DocumentReference>
     ?: emptyList()
 
-  return database.collection("trackers")
-    .orderBy("creator", DESCENDING)
-    .orderBy("timestamp", DESCENDING)
-    .whereIn(FieldPath.documentId(), followedTrackers)
-    .let {
-      if (cursorSnapshot != null) {
-        it.startAfter(cursorSnapshot)
-      } else {
-        it
-      }
+  val cursorIndex =
+    cursorSnapshot?.let {
+      followedTrackers
+        .indexOfFirst { it.id == cursorSnapshot.id }
     }
-    .limit(limit)
-    .getOrEmpty()
+  if (cursorIndex == -1 || cursorIndex == followedTrackers.lastIndex) {
+    return Result.success(emptyList())
+  }
+
+  // Firestore is...very annoying and doesn't allow us to both sort a query by creator and timestamp
+  // AND enforce that every item returns matches an ID. Yes, very annoying I know. So instead, we do
+  // this extremely optimal thing by getting every single tracker the user is following and doing
+  // the sorting and filtering ourselves. I hate Firestore.
+  return database.getAll(*followedTrackers.toTypedArray())
+    .awaitCatching()
+    .flatMap { snapshots ->
+      snapshots
+        .map { snapshot ->
+          snapshot.reference.getOrNull<ServerTracker>().failIfNull()
+        }
+        .combine()
+        .map { otherTrackers ->
+          otherTrackers
+            .sortedWith(
+              compareBy(
+                { it.value.creator },
+                { it.value.timestamp }
+              )
+            )
+            .drop(cursorIndex ?: 0)
+            .take(limit)
+        }
+    }
 }
 
 private const val SELF_TRACKER_CURSOR_PREFIX = "self-trackers:"
@@ -150,7 +172,8 @@ fun Route.listTrackers() = post("/list") {
         owner = OwnerDTO(
           label = owner.label,
           isSelf = owner.uid == user.uid
-        )
+        ),
+        visibility = tracker.visibility
       )
 
       when (tracker.type) {

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -33,11 +35,16 @@ import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
 import com.wardellbagby.tracks.models.trackers.TrackerType
 import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Private
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Public
 
 data class CreateTrackerScreen(
   val type: TrackerType,
+  val visibility: TrackerVisibility,
   val labelTextController: TextController,
   val onTypeSelected: (type: TrackerType) -> Unit,
+  val onVisibilitySelected: (visibility: TrackerVisibility) -> Unit,
   val onBack: () -> Unit,
   val onSave: () -> Unit
 ) : ComposeScreen {
@@ -63,37 +70,59 @@ data class CreateTrackerScreen(
     Column(
       Modifier
         .fillMaxSize()
-        .padding(16.dp)
+        .padding(horizontal = 16.dp)
+        .padding(bottom = 16.dp)
     ) {
-      OutlinedTextField(
-        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-        label = { Text(stringResource(R.string.label)) },
-        value = label,
-        onValueChange = { label = it }
-      )
-
-      Spacer(modifier = Modifier.height(32.dp))
-
-      Column(Modifier.fillMaxWidth()) {
-        Text(
-          stringResource(R.string.what_should_this_track),
-          style = MaterialTheme.typography.labelMedium
+      Column(
+        Modifier
+          .weight(1f)
+          .verticalScroll(rememberScrollState())
+      ) {
+        OutlinedTextField(
+          modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+          label = { Text(stringResource(R.string.label)) },
+          value = label,
+          onValueChange = { label = it }
         )
-        Spacer(modifier = Modifier.height(8.dp))
 
-        LabeledRadioButton(
-          modifier = Modifier.fillMaxWidth(),
-          label = stringResource(R.string.time_since_reset),
-          selected = type == Elapsed,
-          onClick = { onTypeSelected(Elapsed) })
-        LabeledRadioButton(
-          modifier = Modifier.fillMaxWidth(),
-          label = stringResource(R.string.total_action_count),
-          selected = type == Incremental,
-          onClick = { onTypeSelected(Incremental) })
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LabeledRadioGroup(
+          label = stringResource(R.string.what_should_this_track),
+          options = listOf(
+            LabeledOption(
+              label = stringResource(R.string.time_since_reset),
+              option = Elapsed
+            ),
+            LabeledOption(
+              label = stringResource(R.string.total_action_count),
+              option = Incremental
+            )
+          ),
+          selectedOption = type,
+          onOptionSelected = onTypeSelected
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LabeledRadioGroup(
+          label = stringResource(R.string.tracker_visibility),
+          options = listOf(
+            LabeledOption(
+              label = stringResource(R.string.private_tracker_visibility),
+              subLabel = stringResource(R.string.private_tracker_visibility_explanation),
+              option = Private
+            ),
+            LabeledOption(
+              label = stringResource(R.string.public_tracker_visibility),
+              subLabel = stringResource(R.string.public_tracker_visibility_explanation),
+              option = Public
+            )
+          ),
+          selectedOption = visibility,
+          onOptionSelected = onVisibilitySelected
+        )
       }
-
-      Spacer(modifier = Modifier.weight(1f))
 
       Button(
         modifier = Modifier.fillMaxWidth(),
@@ -103,6 +132,33 @@ data class CreateTrackerScreen(
           onSave()
         }) {
         Text(text = stringResource(R.string.save))
+      }
+    }
+  }
+
+  data class LabeledOption<T>(val label: String, val subLabel: String? = null, val option: T)
+
+  @Composable
+  private fun <T> LabeledRadioGroup(
+    label: String,
+    options: List<LabeledOption<T>>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit
+  ) {
+    Column(Modifier.fillMaxWidth()) {
+      Text(
+        label,
+        style = MaterialTheme.typography.labelMedium
+      )
+      Spacer(modifier = Modifier.height(8.dp))
+
+      options.forEach { (optionLabel, subLabel, option) ->
+        LabeledRadioButton(
+          modifier = Modifier.fillMaxWidth(),
+          label = optionLabel,
+          subLabel = subLabel,
+          selected = option == selectedOption,
+          onClick = { onOptionSelected(option) })
       }
     }
   }

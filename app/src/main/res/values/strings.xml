@@ -34,6 +34,10 @@
   <string name="ok">OK</string>
   <string name="optioanl_label">(Optional) Label</string>
   <string name="password">Password</string>
+  <string name="private_tracker_visibility">Private</string>
+  <string name="private_tracker_visibility_explanation">Can only be shared with friends</string>
+  <string name="public_tracker_visibility">Public</string>
+  <string name="public_tracker_visibility_explanation">Available to anyone with the link</string>
   <string name="remove_tracker">Remove tracker</string>
   <string name="reset_time">Reset time</string>
   <string name="retry">Retry</string>
@@ -46,6 +50,7 @@
   <string name="time_since_reset">Time since last reset</string>
   <string name="total_action_count">Total action count</string>
   <string name="tracker_details_title">Tracker Details</string>
+  <string name="tracker_visibility">Tracker visibility</string>
   <string name="trackers">Trackers</string>
   <string name="trackers_null_state_message">Go create some</string>
   <string name="trackers_null_state_title">You\'ve got no trackers yet!</string>

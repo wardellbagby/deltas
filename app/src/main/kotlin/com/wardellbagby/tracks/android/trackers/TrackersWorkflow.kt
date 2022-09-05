@@ -15,6 +15,8 @@ import com.wardellbagby.tracks.android.ScreenAndOverlay
 import com.wardellbagby.tracks.android.Toaster
 import com.wardellbagby.tracks.android.asScreenAndOverlay
 import com.wardellbagby.tracks.android.core_ui.LoadingScreen
+import com.wardellbagby.tracks.android.networking.NetworkResult
+import com.wardellbagby.tracks.android.strings.asTextData
 import com.wardellbagby.tracks.android.trackers.TrackersWorkflow.State
 import com.wardellbagby.tracks.android.trackers.TrackersWorkflow.State.Creating
 import com.wardellbagby.tracks.android.trackers.TrackersWorkflow.State.Listing
@@ -25,10 +27,9 @@ import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow
 import com.wardellbagby.tracks.android.trackers.list.ListTrackersWorkflow
 import com.wardellbagby.tracks.android.trackers.list.ListTrackersWorkflow.Output.TrackerClicked
 import com.wardellbagby.tracks.android.trackers.models.Tracker
-import com.wardellbagby.tracks.models.trackers.TrackerType
 import com.wardellbagby.tracks.models.trackers.CreateTrackerRequest
-import com.wardellbagby.tracks.android.networking.NetworkResult
-import com.wardellbagby.tracks.android.strings.asTextData
+import com.wardellbagby.tracks.models.trackers.TrackerType
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
@@ -50,7 +51,11 @@ class TrackersWorkflow
     object Creating : State
 
     @Parcelize
-    data class SavingTracker(val type: TrackerType, val label: String) : State
+    data class SavingTracker(
+      val type: TrackerType,
+      val label: String,
+      val visibility: TrackerVisibility
+    ) : State
 
     @Parcelize
     data class Viewing(val tracker: Tracker) : State
@@ -70,9 +75,10 @@ class TrackersWorkflow
           CreateTrackerWorkflow.Output.Cancelled -> action {
             state = Listing
           }
+
           is CreateTrackerWorkflow.Output.Created -> action {
             state =
-              SavingTracker(type = it.type, label = it.label)
+              SavingTracker(type = it.type, label = it.label, visibility = it.visibility)
           }
         }
       }.let {
@@ -83,6 +89,7 @@ class TrackersWorkflow
             state = Listing
           }).asScreenAndOverlay()
       }
+
       is Listing -> TrackersScreen(
         list = context.renderChild(child = listWorkflow) {
           when (it) {
@@ -95,6 +102,7 @@ class TrackersWorkflow
           state = Creating
         }
       ).asScreenAndOverlay()
+
       is Viewing -> context.renderChild(
         detailsWorkflow,
         props = TrackerDetailsWorkflow.Props(renderState.tracker)
@@ -108,6 +116,7 @@ class TrackersWorkflow
             state = Listing
           }).asScreenAndOverlay(it.overlay)
       }
+
       is SavingTracker -> {
         // Keep rendering the create workflow so its state isn't lost in case
         // saving fails so we can transition back to it.
@@ -119,7 +128,8 @@ class TrackersWorkflow
           service.createTracker(
             CreateTrackerRequest(
               type = renderState.type,
-              label = renderState.label
+              label = renderState.label,
+              visibility = renderState.visibility
             )
           )
         }) {
@@ -128,6 +138,7 @@ class TrackersWorkflow
               state = Creating
               toaster.showToast("Failed to save counter. Please try again later.")
             }
+
             is NetworkResult.Success -> action {
               state = Listing
             }

@@ -1,12 +1,12 @@
 ![App icon](app/src/main/res/mipmap-hdpi/ic_launcher_adaptive_fore.png)
 
-# Tracks
+# Deltas
 
 The social app for tracking things in your life that change!
 
 ## What is it?
 
-Tracks is an app where you can create "trackers" and share them with your friends!
+Deltas is an app where you can create "trackers" and share them with your friends!
 
 ### What's a "tracker?"
 

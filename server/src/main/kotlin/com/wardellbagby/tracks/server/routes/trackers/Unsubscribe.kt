@@ -2,12 +2,14 @@ package com.wardellbagby.tracks.server.routes.trackers
 
 import com.google.cloud.firestore.FieldValue.arrayRemove
 import com.wardellbagby.tracks.models.DefaultServerResponse
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Private
 import com.wardellbagby.tracks.models.trackers.UnsubscribeTrackerRequest
 import com.wardellbagby.tracks.server.firebase.awaitCatching
 import com.wardellbagby.tracks.server.firebase.database
 import com.wardellbagby.tracks.server.firebase.getOrNull
 import com.wardellbagby.tracks.server.helpers.failIfNull
 import com.wardellbagby.tracks.server.helpers.flatMap
+import com.wardellbagby.tracks.server.helpers.removeFollowedTracker
 import com.wardellbagby.tracks.server.model.ServerTracker
 import com.wardellbagby.tracks.server.routes.getUser
 import com.wardellbagby.tracks.server.routes.safeReceive
@@ -22,32 +24,40 @@ fun Route.unsubscribeTracker() = post("/unsubscribe") {
 
   val trackerRef = database.collection("trackers")
     .document(body.id)
-  val trackerSubscribers = trackerRef.getOrNull<ServerTracker>()
+  val tracker = trackerRef
+    .getOrNull<ServerTracker>()
     .failIfNull()
     .fold(
-      onSuccess = { it.value.visibleTo ?: emptyList() },
+      onSuccess = { it.value },
       onFailure = {
         call.respond(DefaultServerResponse(success = false))
         return@post
       }
     )
+  val trackerSubscribers = tracker.visibleTo ?: emptyList()
 
-  if (user.uid !in trackerSubscribers) {
-    call.respond(DefaultServerResponse(success = false))
-    return@post
+  if (tracker.visibility == Private) {
+    if (user.uid !in trackerSubscribers) {
+      call.respond(DefaultServerResponse(success = false))
+      return@post
+    }
+
+    trackerRef
+      .update("visibleTo", arrayRemove(user.uid))
+      .awaitCatching()
+      .flatMap {
+        database.collection("users")
+          .document(user.uid)
+          .set(mapOf("followedTrackers" to arrayRemove(body.id)))
+          .awaitCatching()
+      }
+      .onFailure { call.respond(DefaultServerResponse(success = false)) }
   }
 
-  trackerRef
-    .update("visibleTo", arrayRemove(user.uid))
-    .awaitCatching()
-    .flatMap {
-      database.collection("users")
-        .document(user.uid)
-        .set(mapOf("followedTrackers" to arrayRemove(body.id)))
-        .awaitCatching()
-    }
+  user.removeFollowedTracker(trackerRef)
     .fold(
-      onSuccess = { call.respond(DefaultServerResponse()) },
+      onSuccess = { call.respond(DefaultServerResponse(success = true)) },
       onFailure = { call.respond(DefaultServerResponse(success = false)) }
     )
+
 }

@@ -57,7 +57,11 @@ fun IncrementalTracker(
   count = count
 )
 
-fun ServerTracker.toDTO(id: String, selfUID: String): TrackerDTO {
+fun ServerTracker.toDTO(
+  id: String,
+  selfUID: String,
+  isUserSubscribed: Boolean
+): TrackerDTO {
   val owner = auth.getUser(creator)
   val baseTracker = TrackerDTO(
     id = id,
@@ -70,7 +74,8 @@ fun ServerTracker.toDTO(id: String, selfUID: String): TrackerDTO {
       label = owner.label,
       isSelf = owner.uid == selfUID
     ),
-    visibility = visibility
+    visibility = visibility,
+    isSubscribed = isUserSubscribed
   )
 
   return when (type) {

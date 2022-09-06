@@ -21,6 +21,7 @@ sealed interface Tracker : Parcelable {
   val canEdit: Boolean
   val visibleTo: List<Friend>
   val visibility: TrackerVisibility
+  val isSubscribed: Boolean
 
   @Parcelize
   data class ElapsedTimeTracker(
@@ -30,9 +31,12 @@ sealed interface Tracker : Parcelable {
     override val canEdit: Boolean,
     override val visibleTo: List<Friend>,
     override val visibility: TrackerVisibility,
+    override val isSubscribed: Boolean,
     // We use Java Instant here because it's serializable
     val resetTime: Instant
-  ) : Tracker
+  ) : Tracker {
+
+  }
 
   @Parcelize
   data class IncrementalTracker(
@@ -42,6 +46,7 @@ sealed interface Tracker : Parcelable {
     override val canEdit: Boolean,
     override val visibleTo: List<Friend>,
     override val visibility: TrackerVisibility,
+    override val isSubscribed: Boolean,
     val count: UInt
   ) : Tracker
 }
@@ -61,7 +66,8 @@ fun TrackerDTO.asModel(): Tracker {
       ownerLabel = owner.label,
       canEdit = owner.isSelf,
       visibleTo = visibleTo.toModels(),
-      visibility = visibility
+      visibility = visibility,
+      isSubscribed = isSubscribed
     )
 
     Incremental -> IncrementalTracker(
@@ -71,7 +77,8 @@ fun TrackerDTO.asModel(): Tracker {
       ownerLabel = owner.label,
       canEdit = owner.isSelf,
       visibleTo = visibleTo.toModels(),
-      visibility = visibility
+      visibility = visibility,
+      isSubscribed = isSubscribed
     )
   }
 }

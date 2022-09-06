@@ -8,6 +8,7 @@ import com.wardellbagby.tracks.models.trackers.GetTrackerRequest
 import com.wardellbagby.tracks.models.trackers.GetTrackerResponse
 import com.wardellbagby.tracks.models.trackers.ListTrackersRequest
 import com.wardellbagby.tracks.models.trackers.ListTrackersResponse
+import com.wardellbagby.tracks.models.trackers.SubscribeTrackerRequest
 import com.wardellbagby.tracks.models.trackers.UnsubscribeTrackerRequest
 import com.wardellbagby.tracks.models.trackers.UpdateTrackerRequest
 import com.wardellbagby.tracks.models.trackers.history.ListHistoryRequest
@@ -39,6 +40,11 @@ interface TrackerService {
   @POST("tracker/delete")
   suspend fun deleteTracker(
     @Body request: DeleteTrackerRequest
+  ): DefaultNetworkResult
+
+  @POST("tracker/subscribe")
+  suspend fun subscribeTracker(
+    @Body request: SubscribeTrackerRequest
   ): DefaultNetworkResult
 
   @POST("tracker/unsubscribe")

@@ -6,11 +6,11 @@ import com.google.firebase.messaging.MulticastMessage
 import com.google.firebase.messaging.Notification
 import com.wardellbagby.tracks.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.tracks.models.trackers.TrackerType.Incremental
+import com.wardellbagby.tracks.server.firebase.awaitCatching
 import com.wardellbagby.tracks.server.firebase.database
 import com.wardellbagby.tracks.server.firebase.getOrNull
 import com.wardellbagby.tracks.server.firebase.messaging
 import com.wardellbagby.tracks.server.model.ServerTracker
-import com.wardellbagby.tracks.server.model.User
 
 private fun ServerTracker.toMulticastMessage(
   trackerId: String,
@@ -42,23 +42,23 @@ private fun ServerTracker.toMulticastMessage(
 }
 
 suspend fun sendTrackerUpdateNotifications(trackerId: String): Result<Unit> {
-  return database.collection("trackers").document(trackerId)
+  val trackerRef = database.collection("trackers").document(trackerId)
+  val tracker = trackerRef
     .getOrNull<ServerTracker>()
     .failIfNull()
-    .flatMap { (_, tracker) ->
-      val tokens = (tracker.visibleTo ?: emptyList())
-        .map { uid ->
-          database.collection("users")
-            .document(uid)
-            .getOrNull<User>()
-            .failIfNull()
-            .mapCatching { (_, user) -> user.messageToken }
-        }
-        .combine()
-
-      tokens.map { tracker to it }
+    .onFailure {
+      return Result.failure(it)
     }
-    .flatMap { (tracker, messageTokens) ->
+    .getOrThrow()
+    .value
+
+  return database.collection("users")
+    .whereArrayContains("followedTrackers", trackerRef)
+    .get()
+    .awaitCatching()
+    .map { it.documents }
+    .map { docs -> docs.mapNotNull { it.getString("messageToken") } }
+    .flatMap { messageTokens ->
       runCatching {
         if (messageTokens.isNotEmpty()) {
           messaging.sendMulticast(tracker.toMulticastMessage(trackerId, messageTokens))

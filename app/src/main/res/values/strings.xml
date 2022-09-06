@@ -15,8 +15,10 @@
   <string name="email">Email</string>
   <string name="failed_to_add_friend">Failed to add friend.</string>
   <string name="failed_to_load_friends">Failed to load friends. Please try again later.</string>
+  <string name="failed_to_load_tracker">Failed to load tracker</string>
   <string name="failed_to_load_trackers">Failed to load trackers. Please try again later.</string>
   <string name="failed_to_share_tracker">Failed to share tracker</string>
+  <string name="follow_tracker">Follow tracker</string>
   <string name="friend_email_address">Friend\'s email address</string>
   <string name="friends">Friends</string>
   <string name="friends_null_state_message">Go add some</string>
@@ -57,5 +59,4 @@
   <string name="unexpected_error">Unexpected error</string>
   <string name="update_tracker">Update tracker</string>
   <string name="what_should_this_track">What should this track?</string>
-  <string name="failed_to_load_tracker">Failed to load tracker</string>
 </resources>

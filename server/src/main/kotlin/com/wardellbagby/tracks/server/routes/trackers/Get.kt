@@ -6,6 +6,7 @@ import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Public
 import com.wardellbagby.tracks.server.firebase.database
 import com.wardellbagby.tracks.server.firebase.getOrNull
 import com.wardellbagby.tracks.server.helpers.failIfNull
+import com.wardellbagby.tracks.server.helpers.getFollowedTrackers
 import com.wardellbagby.tracks.server.model.ServerTracker
 import com.wardellbagby.tracks.server.model.toDTO
 import com.wardellbagby.tracks.server.routes.getUser
@@ -25,6 +26,8 @@ fun Route.getTracker() = post("/get") {
   val user = call.getUser() ?: return@post
   val body = call.safeReceive<GetTrackerRequest>() ?: return@post
 
+  val followedTrackers = user.getFollowedTrackers().map { it.id }
+
   val (id, tracker) = database.collection("trackers")
     .document(body.id)
     .getOrNull<ServerTracker>()
@@ -40,5 +43,13 @@ fun Route.getTracker() = post("/get") {
     return@post
   }
 
-  call.respond(GetTrackerResponse(tracker = tracker.toDTO(id, user.uid)))
+  call.respond(
+    GetTrackerResponse(
+      tracker = tracker.toDTO(
+        id = id,
+        selfUID = user.uid,
+        isUserSubscribed = followedTrackers.contains(id)
+      )
+    )
+  )
 }

@@ -32,6 +32,7 @@ import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.St
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Loading
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.LoadingFailure
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Sharing
+import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Subscribing
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.TypingUpdateLabel
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Unsubscribing
 import com.wardellbagby.tracks.android.trackers.detail.TrackerDetailsWorkflow.State.Updating
@@ -45,6 +46,7 @@ import com.wardellbagby.tracks.android.trackers.models.asModel
 import com.wardellbagby.tracks.android.trackers.models.type
 import com.wardellbagby.tracks.models.trackers.DeleteTrackerRequest
 import com.wardellbagby.tracks.models.trackers.GetTrackerRequest
+import com.wardellbagby.tracks.models.trackers.SubscribeTrackerRequest
 import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Private
 import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Public
 import com.wardellbagby.tracks.models.trackers.UnsubscribeTrackerRequest
@@ -108,6 +110,11 @@ class TrackerDetailsWorkflow
 
     @Parcelize
     data class Unsubscribing(
+      override val tracker: Tracker
+    ) : State
+
+    @Parcelize
+    data class Subscribing(
       override val tracker: Tracker
     ) : State
 
@@ -206,6 +213,15 @@ class TrackerDetailsWorkflow
         LoadingScreen.asScreenAndOverlay()
       }
 
+      is Subscribing -> {
+        context.runningWorker(Worker.from {
+          service.subscribeTracker(SubscribeTrackerRequest(id = renderState.tracker.id))
+        }) {
+          action { setOutput(Unit) }
+        }
+        LoadingScreen.asScreenAndOverlay()
+      }
+
       is Sharing -> {
         when (renderState.tracker.visibility) {
           Private -> context.renderChild(
@@ -243,6 +259,7 @@ class TrackerDetailsWorkflow
           onIncrementClicked = {},
           onResetTimeClicked = {},
           onDeleteClicked = {},
+          onSubscribeClicked = {},
           onUnsubscribeClicked = {},
           onBack = {}
         ).asScreenAndOverlay(
@@ -290,6 +307,9 @@ class TrackerDetailsWorkflow
       },
       onDeleteClicked = context.eventHandler {
         state = Deleting(tracker = state.tracker)
+      },
+      onSubscribeClicked = context.eventHandler {
+        state = Subscribing(tracker = state.tracker)
       },
       onUnsubscribeClicked = context.eventHandler {
         state = Unsubscribing(tracker = state.tracker)

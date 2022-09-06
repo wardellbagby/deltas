@@ -6,3 +6,8 @@ import kotlinx.serialization.Serializable
 data class UnsubscribeTrackerRequest(
   val id: String
 )
+
+@Serializable
+data class SubscribeTrackerRequest(
+  val id: String
+)

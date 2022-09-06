@@ -1,6 +1,5 @@
 package com.wardellbagby.tracks.server.routes.trackers
 
-import com.google.cloud.firestore.DocumentReference
 import com.google.cloud.firestore.DocumentSnapshot
 import com.google.cloud.firestore.Query.Direction.DESCENDING
 import com.google.firebase.auth.UserRecord
@@ -15,6 +14,7 @@ import com.wardellbagby.tracks.server.firebase.getOrNull
 import com.wardellbagby.tracks.server.helpers.combine
 import com.wardellbagby.tracks.server.helpers.failIfNull
 import com.wardellbagby.tracks.server.helpers.flatMap
+import com.wardellbagby.tracks.server.helpers.getFollowedTrackers
 import com.wardellbagby.tracks.server.logger
 import com.wardellbagby.tracks.server.model.ServerTracker
 import com.wardellbagby.tracks.server.model.toDTO
@@ -25,7 +25,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 
-suspend fun UserRecord.getSelfTrackers(
+private suspend fun UserRecord.getSelfTrackers(
   cursorSnapshot: DocumentSnapshot?,
   limit: Int
 ): Result<List<ValueWithId<ServerTracker>>> {
@@ -43,18 +43,11 @@ suspend fun UserRecord.getSelfTrackers(
     .getOrEmpty()
 }
 
-suspend fun UserRecord.getOtherTrackers(
+private suspend fun UserRecord.getOtherTrackers(
   cursorSnapshot: DocumentSnapshot?,
   limit: Int
 ): Result<List<ValueWithId<ServerTracker>>> {
-  @Suppress("UNCHECKED_CAST")
-  val followedTrackers = database.collection("users")
-    .document(uid)
-    .get()
-    .awaitCatching()
-    .getOrNull()
-    ?.get("followedTrackers") as? List<DocumentReference>
-    ?: emptyList()
+  val followedTrackers = getFollowedTrackers()
 
   val cursorIndex =
     cursorSnapshot?.let {
@@ -152,11 +145,12 @@ fun Route.listTrackers() = post("/list") {
       return@post
     }
     .getOrThrow()
-    .filter { (_, tracker) ->
-      user.uid == tracker.creator || user.uid in tracker.visibleTo.orEmpty()
-    }
     .map { (id, tracker) ->
-      tracker.toDTO(id, user.uid)
+      tracker.toDTO(
+        id = id,
+        selfUID = user.uid,
+        isUserSubscribed = true
+      )
     }
 
   call.respond(

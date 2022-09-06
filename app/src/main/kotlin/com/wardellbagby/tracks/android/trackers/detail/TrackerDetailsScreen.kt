@@ -42,6 +42,7 @@ import com.wardellbagby.tracks.android.trackers.HasPageTitle
 import com.wardellbagby.tracks.android.trackers.models.Tracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.ElapsedTimeTracker
 import com.wardellbagby.tracks.android.trackers.models.Tracker.IncrementalTracker
+import com.wardellbagby.tracks.models.trackers.TrackerVisibility.Public
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.datetime.toKotlinInstant
@@ -59,6 +60,7 @@ data class TrackerDetailsScreen(
   val onIncrementClicked: () -> Unit,
   val onResetTimeClicked: () -> Unit,
   val onDeleteClicked: () -> Unit,
+  val onSubscribeClicked: () -> Unit,
   val onUnsubscribeClicked: () -> Unit,
   val onBack: () -> Unit
 ) : ComposeScreen, ContributesToTopBar, HasPageTitle {
@@ -107,11 +109,19 @@ data class TrackerDetailsScreen(
         }
       }
       Column(Modifier.padding(16.dp)) {
-        if (tracker.canEdit) {
-          DeleteButton()
-          tracker.ChangeButton()
-        } else {
-          UnsubscribeButton()
+        when {
+          tracker.canEdit -> {
+            DeleteButton()
+            tracker.ChangeButton()
+          }
+
+          tracker.isSubscribed -> {
+            UnsubscribeButton()
+          }
+
+          tracker.visibility == Public -> {
+            SubscribeButton()
+          }
         }
       }
     }
@@ -176,7 +186,7 @@ data class TrackerDetailsScreen(
   }
 
   @Composable
-  fun DeleteButton() {
+  private fun DeleteButton() {
     ConfirmButton(
       label = R.string.delete_tracker.asTextData(),
       confirmLabel = R.string.confirm_delete_tracker.asTextData(),
@@ -185,11 +195,20 @@ data class TrackerDetailsScreen(
   }
 
   @Composable
-  fun UnsubscribeButton() {
+  private fun UnsubscribeButton() {
     ConfirmButton(
       label = R.string.remove_tracker.asTextData(),
       confirmLabel = R.string.confirm_remove_tracker.asTextData(),
       onClick = onUnsubscribeClicked
     )
+  }
+
+  @Composable
+  private fun SubscribeButton() {
+    Button(
+      modifier = Modifier.fillMaxWidth(),
+      onClick = { onSubscribeClicked() }) {
+      Text(stringResource(R.string.follow_tracker))
+    }
   }
 }

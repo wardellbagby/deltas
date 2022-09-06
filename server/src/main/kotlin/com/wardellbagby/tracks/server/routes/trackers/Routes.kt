@@ -10,6 +10,7 @@ fun Route.trackerRoutes() = route("/tracker") {
   listTrackers()
   updateTrackers()
   deleteTracker()
+  subscribeTracker()
   unsubscribeTracker()
 
   historyRoutes()

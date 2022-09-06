@@ -20,7 +20,8 @@ data class TrackerDTO(
   val count: Int? = null,
   val owner: OwnerDTO,
   val visibleTo: List<FriendDTO>,
-  val visibility: TrackerVisibility
+  val visibility: TrackerVisibility,
+  val isSubscribed: Boolean
 )
 
 @Serializable

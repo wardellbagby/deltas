@@ -1,12 +1,10 @@
 package com.wardellbagby.tracks.server.routes.notifications
 
-import com.google.cloud.firestore.FieldPath
 import com.google.cloud.firestore.SetOptions
 import com.wardellbagby.tracks.models.DefaultServerResponse
 import com.wardellbagby.tracks.models.RegisterNotificationTokenRequest
+import com.wardellbagby.tracks.server.firebase.awaitCatching
 import com.wardellbagby.tracks.server.firebase.database
-import com.wardellbagby.tracks.server.firebase.setCatching
-import com.wardellbagby.tracks.server.model.User
 import com.wardellbagby.tracks.server.routes.getUser
 import com.wardellbagby.tracks.server.routes.safeReceive
 import io.ktor.server.application.call
@@ -24,10 +22,8 @@ fun Route.registerNotifications() = post("register-notification-token") {
   }
   database.collection("users")
     .document(user.uid)
-    .setCatching(
-      User(messageToken = body.token),
-      SetOptions.mergeFieldPaths(listOf(FieldPath.of("messageToken")))
-    )
+    .set(mapOf("messageToken" to body.token), SetOptions.merge())
+    .awaitCatching()
     .fold(
       onSuccess = { call.respond(DefaultServerResponse()) },
       onFailure = { call.respond(DefaultServerResponse(success = false)) }

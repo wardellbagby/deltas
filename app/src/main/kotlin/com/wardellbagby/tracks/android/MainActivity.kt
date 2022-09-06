@@ -13,16 +13,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
-import com.squareup.workflow1.RuntimeConfig
 import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.ViewEnvironment
 import com.squareup.workflow1.ui.compose.WorkflowRendering
 import com.squareup.workflow1.ui.renderWorkflowIn
+import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler
 import com.wardellbagby.tracks.android.networking.Endpoint
 import com.wardellbagby.tracks.android.theming.AppCompositionRoot
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -41,6 +40,9 @@ class MainActivity : AppCompatActivity() {
 
   @Inject
   lateinit var endpoint: Endpoint
+
+  @Inject
+  lateinit var deepLinkHandler: DeepLinkHandler
 
   private val model: AppViewModel by viewModels()
 
@@ -62,7 +64,7 @@ class MainActivity : AppCompatActivity() {
       }
     }
 
-    model.props.value = intent
+    deepLinkHandler.onNewIntent(intent)
 
     setContent {
       val rendering by model.renderings.collectAsState()
@@ -78,7 +80,7 @@ class MainActivity : AppCompatActivity() {
 
   override fun onNewIntent(intent: Intent?) {
     super.onNewIntent(intent)
-    model.props.value = intent
+    deepLinkHandler.onNewIntent(intent)
   }
 }
 
@@ -103,15 +105,11 @@ class AppViewModel
   savedState: SavedStateHandle,
   workflow: AppWorkflow
 ) : ViewModel() {
-  val props = MutableStateFlow<Intent?>(null)
   val renderings: StateFlow<Screen> =
     renderWorkflowIn(
       workflow = workflow,
       scope = viewModelScope,
-      props = props,
       savedStateHandle = savedState,
-      interceptors = listOf(DebugWorkflowLoggingInterceptor),
-      runtimeConfig = RuntimeConfig.DEFAULT_CONFIG,
-      onOutput = {}
+      interceptors = listOf(DebugWorkflowLoggingInterceptor)
     )
 }

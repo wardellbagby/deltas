@@ -10,7 +10,7 @@ import com.squareup.workflow1.runningWorker
 import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.toParcelable
 import com.squareup.workflow1.ui.toSnapshot
-import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult
+import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.None
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.ViewTracker
 import com.wardellbagby.tracks.android.friends.FriendsWorkflow
@@ -28,15 +28,15 @@ class LoggedInWorkflow
   private val trackersWorkflow: TrackersWorkflow,
   private val friendsWorkflow: FriendsWorkflow,
   private val settingsWorkflow: SettingsWorkflow,
-  private val remoteTrackerChangesRepository: RemoteTrackerChangesRepository
-) : StatefulWorkflow<DeepLinkResult, State, Nothing, LoggedInRendering>() {
+  private val remoteTrackerChangesRepository: RemoteTrackerChangesRepository,
+  private val deepLinkHandler: DeepLinkHandler
+) : StatefulWorkflow<Unit, State, Nothing, LoggedInRendering>() {
 
   sealed interface State : Parcelable {
     val trackerChanged: TrackerChanged?
 
     @Parcelize
     data class Trackers(
-      val trackerDeepLink: ViewTracker? = null,
       override val trackerChanged: TrackerChanged? = null,
     ) : State
 
@@ -59,23 +59,27 @@ class LoggedInWorkflow
     }
   }
 
-  override fun initialState(props: DeepLinkResult, snapshot: Snapshot?): State {
-    return snapshot?.toParcelable()
-      ?: Trackers(trackerDeepLink = props as? ViewTracker)
-  }
-
-  override fun onPropsChanged(old: DeepLinkResult, new: DeepLinkResult, state: State): State {
-    return when (new) {
-      None -> state
-      is ViewTracker -> Trackers(trackerDeepLink = new)
-    }
+  override fun initialState(props: Unit, snapshot: Snapshot?): State {
+    return snapshot?.toParcelable() ?: Trackers()
   }
 
   override fun render(
-    renderProps: DeepLinkResult,
+    renderProps: Unit,
     renderState: State,
     context: RenderContext
   ): LoggedInRendering {
+    context.runningWorker(
+      deepLinkHandler.currentDeepLink
+        .asWorker()
+    ) {
+      action {
+        state = when(it) {
+          None -> state
+          is ViewTracker -> Trackers()
+        }
+      }
+    }
+
     context.runningWorker(
       worker = remoteTrackerChangesRepository.trackerChanges.asWorker()
     ) {
@@ -86,8 +90,7 @@ class LoggedInWorkflow
     return when (renderState) {
       is Trackers -> {
         val rendering = context.renderChild(
-          child = trackersWorkflow,
-          props = renderState.trackerDeepLink
+          child = trackersWorkflow
         )
         LoggedInRendering(
           screen = rendering.screen.wrapWithBottomNav(renderState, context),

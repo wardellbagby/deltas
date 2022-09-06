@@ -6,6 +6,7 @@ import com.squareup.workflow1.StatefulWorkflow
 import com.squareup.workflow1.Worker
 import com.squareup.workflow1.WorkflowAction.Companion.noAction
 import com.squareup.workflow1.action
+import com.squareup.workflow1.asWorker
 import com.squareup.workflow1.renderChild
 import com.squareup.workflow1.runningWorker
 import com.squareup.workflow1.ui.toParcelable
@@ -15,7 +16,8 @@ import com.wardellbagby.tracks.android.ScreenAndOverlay
 import com.wardellbagby.tracks.android.Toaster
 import com.wardellbagby.tracks.android.asScreenAndOverlay
 import com.wardellbagby.tracks.android.core_ui.LoadingScreen
-import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.ViewTracker
+import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler
+import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult
 import com.wardellbagby.tracks.android.networking.NetworkResult
 import com.wardellbagby.tracks.android.strings.asTextData
 import com.wardellbagby.tracks.android.trackers.TrackersWorkflow.State
@@ -31,6 +33,7 @@ import com.wardellbagby.tracks.android.trackers.models.Tracker
 import com.wardellbagby.tracks.models.trackers.CreateTrackerRequest
 import com.wardellbagby.tracks.models.trackers.TrackerType
 import com.wardellbagby.tracks.models.trackers.TrackerVisibility
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
@@ -40,8 +43,9 @@ class TrackersWorkflow
   private val createWorkflow: CreateTrackerWorkflow,
   private val detailsWorkflow: TrackerDetailsWorkflow,
   private val service: TrackerService,
-  private val toaster: Toaster
-) : StatefulWorkflow<ViewTracker?, State, Nothing, ScreenAndOverlay>() {
+  private val toaster: Toaster,
+  private val deepLinkHandler: DeepLinkHandler
+) : StatefulWorkflow<Unit, State, Nothing, ScreenAndOverlay>() {
   sealed interface State : Parcelable {
 
     @Parcelize
@@ -64,14 +68,24 @@ class TrackersWorkflow
     ) : State
   }
 
-  override fun initialState(props: ViewTracker?, snapshot: Snapshot?): State =
+  override fun initialState(props: Unit, snapshot: Snapshot?): State =
     snapshot?.toParcelable() ?: Listing
 
   override fun render(
-    renderProps: ViewTracker?,
+    renderProps: Unit,
     renderState: State,
     context: RenderContext
   ): ScreenAndOverlay {
+    context.runningWorker(
+      deepLinkHandler.currentDeepLink
+        .filterIsInstance<DeepLinkResult.ViewTracker>()
+        .asWorker()
+    ) {
+      action {
+        state = Viewing(id = it.id)
+        deepLinkHandler.onDeepLinkHandled()
+      }
+    }
     return when (renderState) {
       is Creating -> context.renderChild(createWorkflow) {
         when (it) {
@@ -159,12 +173,4 @@ class TrackersWorkflow
   }
 
   override fun snapshotState(state: State): Snapshot = state.toSnapshot()
-
-  override fun onPropsChanged(old: ViewTracker?, new: ViewTracker?, state: State): State {
-    return if (new != null) {
-      Viewing(tracker = null, id = new.id)
-    } else {
-      state
-    }
-  }
 }

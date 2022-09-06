@@ -173,6 +173,10 @@ private suspend fun updateSharedTracker(
   val oldVisibleTo = old.visibleTo.orEmpty().toSet()
   val newVisibleTo = new.visibleTo.orEmpty().toSet()
 
+  if (oldVisibleTo == newVisibleTo) {
+    return Result.success(Unit)
+  }
+
   val newlyVisibleTo = newVisibleTo - oldVisibleTo
   val notVisibleTo = oldVisibleTo - newlyVisibleTo
 

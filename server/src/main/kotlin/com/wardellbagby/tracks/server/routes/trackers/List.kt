@@ -49,14 +49,7 @@ private suspend fun UserRecord.getOtherTrackers(
 ): Result<List<ValueWithId<ServerTracker>>> {
   val followedTrackers = getFollowedTrackers()
 
-  val cursorIndex =
-    cursorSnapshot?.let {
-      followedTrackers
-        .indexOfFirst { it.id == cursorSnapshot.id }
-    }
-  if (cursorIndex == -1 || cursorIndex == followedTrackers.lastIndex) {
-    return Result.success(emptyList())
-  }
+  val cursorId = cursorSnapshot?.id
 
   // Firestore is...very annoying and doesn't allow us to both sort a query by creator and timestamp
   // AND enforce that every item returns matches an ID. Yes, very annoying I know. So instead, we do
@@ -78,8 +71,15 @@ private suspend fun UserRecord.getOtherTrackers(
                 { it.value.timestamp }
               )
             )
-            .drop(cursorIndex ?: 0)
-            .take(limit)
+        }
+        .map {
+          val result = if (cursorId != null) {
+            val cursorIndex = it.indexOfFirst { tracker -> tracker.id == cursorId }
+            it.drop(cursorIndex + 1)
+          } else {
+            it
+          }
+          result.take(limit)
         }
     }
 }

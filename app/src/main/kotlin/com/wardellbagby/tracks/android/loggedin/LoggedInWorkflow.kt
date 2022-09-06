@@ -73,7 +73,7 @@ class LoggedInWorkflow
         .asWorker()
     ) {
       action {
-        state = when(it) {
+        state = when (it) {
           None -> state
           is ViewTracker -> Trackers()
         }

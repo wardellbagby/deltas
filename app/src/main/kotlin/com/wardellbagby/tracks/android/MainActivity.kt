@@ -1,6 +1,10 @@
 package com.wardellbagby.tracks.android
 
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.content.Intent
+import android.content.pm.PackageManager.PERMISSION_GRANTED
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES.TIRAMISU
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -81,6 +85,13 @@ class MainActivity : AppCompatActivity() {
   override fun onNewIntent(intent: Intent?) {
     super.onNewIntent(intent)
     deepLinkHandler.onNewIntent(intent)
+  }
+
+  override fun onResume() {
+    super.onResume()
+    if (SDK_INT >= TIRAMISU && checkSelfPermission(POST_NOTIFICATIONS) != PERMISSION_GRANTED) {
+      requestPermissions(arrayOf(POST_NOTIFICATIONS), 0)
+    }
   }
 }
 

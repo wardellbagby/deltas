@@ -97,7 +97,7 @@ class SettingsWorkflow
       }
 
       Idle -> SettingsScreen(
-        displayName = Firebase.auth.currentUser!!.displayName?.asTextData()
+        displayName = Firebase.auth.currentUser?.displayName?.asTextData()
           ?: R.string.no_display_name.asTextData(),
         endpoint = endpoint.current,
         onDisplayNameClicked = context.eventHandler {

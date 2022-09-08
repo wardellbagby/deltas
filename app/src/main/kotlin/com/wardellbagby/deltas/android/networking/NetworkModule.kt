@@ -52,14 +52,14 @@ object NetworkModule {
             .let { request ->
               // runBlocking isn't preferred here BUT is okay because OkHttp will only block
               // this single call; others will go through as needed.
-              val token = runBlocking {
-                runCatching {
+              val token = runCatching {
+                runBlocking {
                   FirebaseAuth.getInstance().currentUser
                     ?.getIdToken(false)
                     ?.await()
                     ?.token
-                }.getOrNull()
-              }
+                }
+              }.getOrNull()
               if (token.isNotNullOrBlank()) {
                 request.addHeader("Authorization", token)
               } else {

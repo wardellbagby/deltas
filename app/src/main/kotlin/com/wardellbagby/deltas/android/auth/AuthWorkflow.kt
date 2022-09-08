@@ -97,6 +97,8 @@ class AuthWorkflow
             .asWorker()
         ) {
           action {
+            deepLinkHandler.onDeepLinkHandled()
+
             val currentState = state as? EnteringEmail ?: return@action
             state = EnteringEmail(
               emailTextController = currentState.emailTextController,

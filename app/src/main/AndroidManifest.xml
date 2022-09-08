@@ -5,7 +5,7 @@
   <uses-permission android:name="android.permission.INTERNET"/>
 
   <application
-      android:name="com.wardellbagby.deltas.android.DefaultApplication"
+      android:name=".DefaultApplication"
       android:allowBackup="true"
       android:fullBackupContent="false"
       android:icon="@mipmap/ic_launcher"
@@ -13,7 +13,7 @@
       android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
 
     <activity
-        android:name="com.wardellbagby.deltas.android.MainActivity"
+        android:name=".MainActivity"
         android:windowSoftInputMode="adjustResize"
         android:launchMode="singleInstance"
         android:exported="true">
@@ -38,7 +38,7 @@
       </intent-filter>
     </activity>
     <service
-        android:name="com.wardellbagby.deltas.android.firebase.notifications.FirebaseNotificationService"
+        android:name=".firebase.notifications.FirebaseNotificationService"
         android:exported="false">
       <intent-filter>
         <action android:name="com.google.firebase.MESSAGING_EVENT"/>

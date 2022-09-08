@@ -12,7 +12,9 @@
   <string name="days">days</string>
   <string name="delete_tracker">Delete tracker</string>
   <string name="details">Details</string>
+  <string name="display_name">Display name</string>
   <string name="email">Email</string>
+  <string name="your_display_name">Your display name</string>
   <string name="failed_to_add_friend">Failed to add friend.</string>
   <string name="failed_to_create_account">Failed to create account. Please try again.</string>
   <string name="failed_to_load_friends">Failed to load friends. Please try again later.</string>
@@ -66,4 +68,6 @@
   <string name="use_email_link">Use email link instead?</string>
   <string name="what_should_this_track">What should this track?</string>
   <string name="please_reenter_email">Please re-enter your email address to be logged in</string>
+  <string name="no_display_name">No display name</string>
+  <string name="failed_to_update_display_name">Failed to update display name</string>
 </resources>

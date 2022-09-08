@@ -10,6 +10,7 @@ import com.squareup.workflow1.runningWorker
 import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.toParcelable
 import com.squareup.workflow1.ui.toSnapshot
+import com.wardellbagby.tracks.android.ScreenAndOverlay
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.ViewTracker
 import com.wardellbagby.tracks.android.friends.FriendsWorkflow
@@ -86,15 +87,8 @@ class LoggedInWorkflow
       }
     }
     return when (renderState) {
-      is Trackers -> {
-        val rendering = context.renderChild(
-          child = trackersWorkflow
-        )
-        LoggedInRendering(
-          screen = rendering.screen.wrapWithBottomNav(renderState, context),
-          overlay = rendering.overlay
-        )
-      }
+      is Trackers -> context.renderChild(trackersWorkflow)
+        .asLoggedInRendering(renderState, context)
 
       is Friends -> {
         val rendering = context.renderChild(friendsWorkflow)
@@ -104,15 +98,23 @@ class LoggedInWorkflow
         )
       }
 
-      is Settings -> LoggedInRendering(
-        screen = context.renderChild(settingsWorkflow)
-          .wrapWithBottomNav(renderState, context)
-      )
+      is Settings -> context.renderChild(settingsWorkflow)
+        .asLoggedInRendering(renderState, context)
     }
   }
 
   override fun snapshotState(state: State): Snapshot {
     return state.toSnapshot()
+  }
+
+  private fun ScreenAndOverlay.asLoggedInRendering(
+    renderState: State,
+    context: RenderContext
+  ): LoggedInRendering {
+    return LoggedInRendering(
+      screen = screen.wrapWithBottomNav(renderState, context),
+      overlay = overlay
+    )
   }
 
   private fun Screen.wrapWithBottomNav(

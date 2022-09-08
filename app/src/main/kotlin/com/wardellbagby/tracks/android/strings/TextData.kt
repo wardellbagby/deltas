@@ -27,9 +27,9 @@ sealed interface TextData : Parcelable {
     is CompoundText -> first.get() + second.get()
   }
 
-  fun toString(context: Context): String {
+  fun asString(context: Context): String {
     return when (this) {
-      is CompoundText -> first.toString(context) + second.toString(context)
+      is CompoundText -> first.asString(context) + second.asString(context)
       is ResourceText -> context.resources.getString(stringRes)
       is StringText -> string
     }

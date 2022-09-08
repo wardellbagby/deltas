@@ -13,7 +13,7 @@ import javax.inject.Inject
 class Toaster
 @Inject constructor(@ApplicationContext private val context: Context) {
   fun showToast(message: TextData) {
-    Toast.makeText(context, message.toString(), Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, message.asString(context), Toast.LENGTH_SHORT).show()
   }
 }
 

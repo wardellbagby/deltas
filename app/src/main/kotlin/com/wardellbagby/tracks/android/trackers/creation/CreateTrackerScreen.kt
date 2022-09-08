@@ -22,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.squareup.workflow1.ui.TextController
@@ -56,10 +55,8 @@ data class CreateTrackerScreen(
     val focusRequester = remember {
       FocusRequester()
     }
-    val focusManager = LocalFocusManager.current
 
     BackHandler {
-      focusManager.clearFocus(force = true)
       onBack()
     }
 
@@ -128,7 +125,6 @@ data class CreateTrackerScreen(
         modifier = Modifier.fillMaxWidth(),
         enabled = label.isNotNullOrBlank(),
         onClick = {
-          focusManager.clearFocus(force = true)
           onSave()
         }) {
         Text(text = stringResource(R.string.save))

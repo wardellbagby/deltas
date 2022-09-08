@@ -22,6 +22,7 @@ import com.squareup.workflow1.ui.ViewEnvironment
 import com.squareup.workflow1.ui.compose.ComposeScreen
 import com.squareup.workflow1.ui.compose.WorkflowRendering
 import com.wardellbagby.tracks.android.core_ui.ContentPadding
+import com.wardellbagby.tracks.android.core_ui.DelegateScreen
 import com.wardellbagby.tracks.android.strings.TextData
 
 interface ContributesToTopBar {
@@ -37,7 +38,9 @@ data class TrackersChildScreen(
   val title: TextData,
   val rendering: Screen,
   val onBack: () -> Unit,
-) : ComposeScreen {
+) : ComposeScreen, DelegateScreen {
+  override val actual: Screen
+    get() = rendering
 
   @OptIn(ExperimentalMaterial3Api::class)
   @Composable

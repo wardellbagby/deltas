@@ -18,13 +18,17 @@ import com.squareup.workflow1.ui.compose.ComposeScreen
 import com.squareup.workflow1.ui.compose.WorkflowRendering
 import com.wardellbagby.tracks.android.R
 import com.wardellbagby.tracks.android.core_ui.ContentPadding
+import com.wardellbagby.tracks.android.core_ui.DelegateScreen
 import com.wardellbagby.tracks.android.core_ui.plus
 import com.wardellbagby.tracks.android.core_ui.withContentPadding
 
 data class TrackersScreen(
   val list: Screen,
   val onCreateClicked: () -> Unit
-) : ComposeScreen {
+) : ComposeScreen, DelegateScreen {
+  override val actual: Screen
+    get() = list
+
   @OptIn(ExperimentalMaterial3Api::class)
   @Composable
   override fun Content(viewEnvironment: ViewEnvironment) {

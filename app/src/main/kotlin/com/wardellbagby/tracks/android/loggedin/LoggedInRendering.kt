@@ -23,6 +23,7 @@ import com.squareup.workflow1.ui.compose.ComposeScreen
 import com.squareup.workflow1.ui.compose.WorkflowRendering
 import com.squareup.workflow1.ui.container.Overlay
 import com.wardellbagby.tracks.android.R
+import com.wardellbagby.tracks.android.core_ui.DelegateScreen
 import com.wardellbagby.tracks.android.core_ui.withContentPadding
 import com.wardellbagby.tracks.android.loggedin.Destination.Friends
 import com.wardellbagby.tracks.android.loggedin.Destination.Settings
@@ -47,7 +48,10 @@ data class BottomNavigationRendering(
   val onSnackbarAcknowledged: () -> Unit,
   val currentDestination: Destination,
   val onDestinationChanged: (Destination) -> Unit
-) : ComposeScreen {
+) : ComposeScreen, DelegateScreen {
+
+  override val actual: Screen
+    get() = wrapped
 
   @OptIn(ExperimentalMaterial3Api::class)
   @Composable

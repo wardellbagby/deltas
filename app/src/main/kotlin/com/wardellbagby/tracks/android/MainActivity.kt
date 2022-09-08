@@ -1,16 +1,23 @@
 package com.wardellbagby.tracks.android
 
 import android.Manifest.permission.POST_NOTIFICATIONS
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.TIRAMISU
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -21,6 +28,7 @@ import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.ViewEnvironment
 import com.squareup.workflow1.ui.compose.WorkflowRendering
 import com.squareup.workflow1.ui.renderWorkflowIn
+import com.wardellbagby.tracks.android.core_ui.getActual
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler
 import com.wardellbagby.tracks.android.networking.Endpoint
 import com.wardellbagby.tracks.android.theming.AppCompositionRoot
@@ -49,7 +57,11 @@ class MainActivity : AppCompatActivity() {
   lateinit var deepLinkHandler: DeepLinkHandler
 
   private val model: AppViewModel by viewModels()
+  private val inputMethodManager by lazy {
+    getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+  }
 
+  @OptIn(ExperimentalComposeUiApi::class)
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
@@ -72,6 +84,23 @@ class MainActivity : AppCompatActivity() {
 
     setContent {
       val rendering by model.renderings.collectAsState()
+      val actualRendering = rendering.getActual()
+
+      val focusManager = LocalFocusManager.current
+      val keyboardController = LocalSoftwareKeyboardController.current
+      val view = LocalView.current
+
+      LaunchedEffect(actualRendering.javaClass) {
+        // Really try super hard to hide the soft keyboard.
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        inputMethodManager.hideSoftInputFromWindow(
+          view.windowToken,
+          0
+        )
+
+      }
+
       // TODO File another Workflow issue about withCompositionRoot not working
       AppCompositionRoot {
         WorkflowRendering(

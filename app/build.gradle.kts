@@ -20,7 +20,7 @@ android {
   buildToolsVersion = "33.0.0"
 
   defaultConfig {
-    applicationId = "com.wardellbagby.tracks.android"
+    applicationId = "com.wardellbagby.deltas.android"
     minSdk = 21
     targetSdk = 33
     versionName = AppVersion.versionName

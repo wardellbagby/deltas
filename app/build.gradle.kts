@@ -26,8 +26,14 @@ android {
     versionName = AppVersion.versionName
     versionCode = 1
 
-    resValue("string", "deep_link_scheme", "https")
-    resValue("string", "deep_link_host", "deltas.app")
+    fun buildConstant(name: String, value: String) {
+      manifestPlaceholders[name] = value
+      buildConfigField("String", name, "\"$value\"")
+    }
+
+    buildConstant("DEEP_LINK_SCHEME", "https")
+    buildConstant("DEEP_LINK_HOST", "deltas.app")
+    buildConstant("DEEP_LINK_FIREBASE_HOST", "deltas.page.link")
   }
 
   buildFeatures {
@@ -82,6 +88,7 @@ dependencies {
   implementation(Dependencies.FirebaseAuth)
   implementation(Dependencies.FirebaseAuthKtx)
   implementation(Dependencies.FirebaseMessaging)
+  implementation(Dependencies.FirebaseLinks)
 }
 
 tasks.withType<KotlinCompile>().configureEach {

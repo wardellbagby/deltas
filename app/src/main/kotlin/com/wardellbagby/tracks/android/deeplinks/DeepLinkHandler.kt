@@ -1,14 +1,16 @@
 package com.wardellbagby.tracks.android.deeplinks
 
-import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Parcelable
-import com.wardellbagby.tracks.android.R
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import com.wardellbagby.tracks.android.BuildConfig
+import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.LoginAttempt
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.None
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.ViewTracker
 import com.wardellbagby.tracks.android.strings.isNotNullOrBlank
 import com.wardellbagby.tracks.utils.nullIfEmpty
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.parcelize.Parcelize
@@ -17,11 +19,8 @@ import javax.inject.Singleton
 
 @Singleton
 class DeepLinkHandler
-@Inject constructor(
-  @ApplicationContext context: Context
-) {
+@Inject constructor() {
   private val deepLink = MutableStateFlow<DeepLinkResult>(None)
-  private val resources = context.resources
 
   val currentDeepLink: StateFlow<DeepLinkResult> = deepLink
 
@@ -31,6 +30,9 @@ class DeepLinkHandler
 
     @Parcelize
     data class ViewTracker(val id: String) : DeepLinkResult
+
+    @Parcelize
+    data class LoginAttempt(val data: String) : DeepLinkResult
   }
 
   fun onDeepLinkHandled() {
@@ -42,24 +44,28 @@ class DeepLinkHandler
   }
 
   private fun Intent?.asDeepLinkResult(): DeepLinkResult {
-    if (this == null ||
-      action != Intent.ACTION_VIEW ||
-      scheme != resources.getString(R.string.deep_link_scheme)
-    ) {
-      return None
+    val data = this?.data ?: return None
+
+    return when {
+      Firebase.auth.isSignInWithEmailLink(data.toString()) -> {
+        LoginAttempt(data.toString())
+      }
+
+      action == Intent.ACTION_VIEW && scheme == BuildConfig.DEEP_LINK_SCHEME -> {
+        validateTrackerDeepLink(data)
+      }
+
+      else -> None
     }
+  }
 
-    val data = data ?: return None
-
-    if (data.host != resources.getString(R.string.deep_link_host)) {
-      return None
-    }
-
+  private fun validateTrackerDeepLink(data: Uri): DeepLinkResult {
     val path = data.path
       ?.split("/")
       ?.nullIfEmpty()
       ?.filter { it.isNotNullOrBlank() }
       ?: return None
+
     return when (path.first()) {
       "view" -> {
         val id = path.getOrNull(1) ?: return None

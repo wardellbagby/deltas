@@ -1,17 +1,12 @@
 package com.wardellbagby.tracks.android.deeplinks
 
-import android.content.Context
 import android.content.Intent
-import com.wardellbagby.tracks.android.R
+import com.wardellbagby.tracks.android.BuildConfig
 import com.wardellbagby.tracks.android.trackers.models.Tracker
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 class DeepLinkCreator
-@Inject constructor(
-  @ApplicationContext context: Context
-) {
-  private val resources = context.resources
+@Inject constructor() {
   fun createShareTrackerIntent(tracker: Tracker): Intent {
     return Intent(Intent.ACTION_SEND).apply {
       type = "text/plain"
@@ -20,8 +15,8 @@ class DeepLinkCreator
   }
 
   private fun Tracker.asViewUrl(): String {
-    val scheme = resources.getString(R.string.deep_link_scheme)
-    val host = resources.getString(R.string.deep_link_host)
+    val scheme = BuildConfig.DEEP_LINK_SCHEME
+    val host = BuildConfig.DEEP_LINK_HOST
 
     return "$scheme://$host/view/$id"
   }

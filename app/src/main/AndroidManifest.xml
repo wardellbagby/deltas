@@ -15,22 +15,26 @@
     <activity
         android:name=".MainActivity"
         android:windowSoftInputMode="adjustResize"
-        android:launchMode="singleTop"
+        android:launchMode="singleInstance"
         android:exported="true">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
 
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
-      <intent-filter android:label="View Trackers">
+      <intent-filter android:label="View Trackers" android:autoVerify="true">
         <action android:name="android.intent.action.VIEW"/>
 
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
 
         <data
-            android:scheme="@string/deep_link_scheme"
-            android:host="@string/deep_link_host"/>
+            android:scheme="${DEEP_LINK_SCHEME}"
+            android:host="${DEEP_LINK_HOST}"/>
+
+        <data
+            android:scheme="${DEEP_LINK_SCHEME}"
+            android:host="${DEEP_LINK_FIREBASE_HOST}"/>
       </intent-filter>
     </activity>
     <service

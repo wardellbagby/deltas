@@ -1,5 +1,6 @@
 package com.wardellbagby.tracks.android.strings
 
+import android.content.Context
 import android.os.Parcelable
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
@@ -24,6 +25,14 @@ sealed interface TextData : Parcelable {
     is ResourceText -> stringResource(stringRes)
     is StringText -> string
     is CompoundText -> first.get() + second.get()
+  }
+
+  fun toString(context: Context): String {
+    return when (this) {
+      is CompoundText -> first.toString(context) + second.toString(context)
+      is ResourceText -> context.resources.getString(stringRes)
+      is StringText -> string
+    }
   }
 }
 

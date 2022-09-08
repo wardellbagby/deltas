@@ -2,6 +2,8 @@ package com.wardellbagby.tracks.android
 
 import android.content.Context
 import android.widget.Toast
+import com.wardellbagby.tracks.android.strings.TextData
+import com.wardellbagby.tracks.android.strings.asTextData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -10,7 +12,11 @@ import javax.inject.Inject
  */
 class Toaster
 @Inject constructor(@ApplicationContext private val context: Context) {
-  fun showToast(message: String) {
-    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+  fun showToast(message: TextData) {
+    Toast.makeText(context, message.toString(), Toast.LENGTH_SHORT).show()
   }
+}
+
+fun Toaster.showToast(message: String) {
+  showToast(message.asTextData())
 }

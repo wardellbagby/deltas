@@ -11,7 +11,6 @@ import com.squareup.workflow1.ui.Screen
 import com.squareup.workflow1.ui.toParcelable
 import com.squareup.workflow1.ui.toSnapshot
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler
-import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.None
 import com.wardellbagby.tracks.android.deeplinks.DeepLinkHandler.DeepLinkResult.ViewTracker
 import com.wardellbagby.tracks.android.friends.FriendsWorkflow
 import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State
@@ -20,6 +19,7 @@ import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State.Settings
 import com.wardellbagby.tracks.android.loggedin.LoggedInWorkflow.State.Trackers
 import com.wardellbagby.tracks.android.settings.SettingsWorkflow
 import com.wardellbagby.tracks.android.trackers.TrackersWorkflow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
@@ -70,13 +70,11 @@ class LoggedInWorkflow
   ): LoggedInRendering {
     context.runningWorker(
       deepLinkHandler.currentDeepLink
+        .filterIsInstance<ViewTracker>()
         .asWorker()
     ) {
       action {
-        state = when (it) {
-          None -> state
-          is ViewTracker -> Trackers()
-        }
+        state = Trackers()
       }
     }
 

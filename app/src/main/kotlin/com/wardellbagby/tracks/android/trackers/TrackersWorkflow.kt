@@ -159,7 +159,7 @@ class TrackersWorkflow
           when (it) {
             is NetworkResult.Failure -> action {
               state = Creating
-              toaster.showToast("Failed to save counter. Please try again later.")
+              toaster.showToast(R.string.failed_to_save_counter.asTextData())
             }
 
             is NetworkResult.Success -> action {

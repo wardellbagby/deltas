@@ -90,6 +90,7 @@ object Dependencies {
   const val FirebaseAuth = "com.google.firebase:firebase-auth"
   const val FirebaseAuthKtx = "com.google.firebase:firebase-auth-ktx"
   const val FirebaseMessaging = "com.google.firebase:firebase-messaging"
+  const val FirebaseLinks = "com.google.firebase:firebase-dynamic-links-ktx"
 
   const val KtorServerCore = "io.ktor:ktor-server-core-jvm:$ktorServerVersion"
   const val KtorServerCIO = "io.ktor:ktor-server-cio-jvm:$ktorServerVersion"

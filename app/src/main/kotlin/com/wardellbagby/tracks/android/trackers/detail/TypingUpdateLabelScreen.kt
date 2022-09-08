@@ -68,7 +68,7 @@ data class TypingUpdateLabelScreen(
       OutlinedTextField(
         value = label,
         onValueChange = { label = it.take(MAX_LABEL_LENGTH) },
-        label = { Text(stringResource(R.string.optioanl_label)) },
+        label = { Text(stringResource(R.string.optional_label)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
       )
       Spacer(Modifier.height(16.dp))

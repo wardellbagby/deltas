@@ -24,7 +24,7 @@ android {
     minSdk = 21
     targetSdk = 33
     versionName = AppVersion.versionName
-    versionCode = 1
+    versionCode = 2
 
     fun buildConstant(name: String, value: String) {
       manifestPlaceholders[name] = value
@@ -52,9 +52,12 @@ android {
 
   buildTypes {
     release {
-      isMinifyEnabled = true
-      isShrinkResources = true
-      proguardFiles(getDefaultProguardFile("proguard-android.txt"))
+      postprocessing {
+        isRemoveUnusedCode = false
+        isRemoveUnusedResources = true
+        isObfuscate = false
+        isOptimizeCode = true
+      }
     }
   }
 }

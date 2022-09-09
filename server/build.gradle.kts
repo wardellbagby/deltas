@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-  mainClass.set("com.wardellbagby.tracks.server.ServerKt")
+  mainClass.set("com.wardellbagby.deltas.server.ServerKt")
 }
 
 ktor {

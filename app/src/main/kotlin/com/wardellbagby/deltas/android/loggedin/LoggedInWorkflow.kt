@@ -88,19 +88,9 @@ class LoggedInWorkflow
     }
     return when (renderState) {
       is Trackers -> context.renderChild(trackersWorkflow)
-        .asLoggedInRendering(renderState, context)
-
-      is Friends -> {
-        val rendering = context.renderChild(friendsWorkflow)
-        LoggedInRendering(
-          screen = rendering.screen.wrapWithBottomNav(renderState, context),
-          overlay = rendering.overlay
-        )
-      }
-
+      is Friends -> context.renderChild(friendsWorkflow)
       is Settings -> context.renderChild(settingsWorkflow)
-        .asLoggedInRendering(renderState, context)
-    }
+    }.asLoggedInRendering(renderState, context)
   }
 
   override fun snapshotState(state: State): Snapshot {

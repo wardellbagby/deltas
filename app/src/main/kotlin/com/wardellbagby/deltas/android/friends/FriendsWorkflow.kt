@@ -5,10 +5,9 @@ import com.squareup.workflow1.Snapshot
 import com.squareup.workflow1.StatefulWorkflow
 import com.squareup.workflow1.action
 import com.squareup.workflow1.renderChild
-import com.squareup.workflow1.ui.Screen
-import com.squareup.workflow1.ui.container.Overlay
 import com.squareup.workflow1.ui.toParcelable
 import com.squareup.workflow1.ui.toSnapshot
+import com.wardellbagby.deltas.android.ScreenAndOverlay
 import com.wardellbagby.deltas.android.friends.FriendsWorkflow.State
 import com.wardellbagby.deltas.android.friends.FriendsWorkflow.State.AddFriend
 import com.wardellbagby.deltas.android.friends.FriendsWorkflow.State.List
@@ -17,16 +16,11 @@ import com.wardellbagby.deltas.android.friends.list.ListFriendsWorkflow
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
-data class FriendsRendering(
-  val screen: Screen,
-  val overlay: Overlay? = null
-)
-
 class FriendsWorkflow
 @Inject constructor(
   private val listWorkflow: ListFriendsWorkflow,
   private val addFriendWorkflow: AddFriendWorkflow
-) : StatefulWorkflow<Unit, State, Nothing, FriendsRendering>() {
+) : StatefulWorkflow<Unit, State, Nothing, ScreenAndOverlay>() {
   sealed interface State : Parcelable {
     val listKey: Int
 
@@ -41,13 +35,13 @@ class FriendsWorkflow
     renderProps: Unit,
     renderState: State,
     context: RenderContext
-  ): FriendsRendering {
+  ): ScreenAndOverlay {
 
     val listRendering = context.renderChild(
       listWorkflow,
       key = renderState.listKey.toString()
     )
-    return FriendsRendering(
+    return ScreenAndOverlay(
       screen = FriendsScreen(
         list = listRendering,
         onAddClicked = context.eventHandler {

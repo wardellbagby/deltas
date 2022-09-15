@@ -12,13 +12,15 @@ import kotlin.time.DurationUnit.HOURS
 import kotlin.time.DurationUnit.MINUTES
 
 private fun Double.format(unit: DurationUnit): TextData {
+  val formattedTime = if (this < 0.99) 0.0 else this
+
   val formattedUnit = when (unit) {
     MINUTES -> if (this == 1.0) R.string.minute else R.string.minutes
     HOURS -> if (this == 1.0) R.string.hour else R.string.hours
     DAYS -> if (this == 1.0) R.string.day else R.string.days
     else -> error("Cannot format $unit duration unit.")
   }.asTextData()
-  return "%,.1f ".format(Locale.getDefault(), this).asTextData() + formattedUnit
+  return "%,.1f ".format(Locale.getDefault(), formattedTime).asTextData() + formattedUnit
 }
 
 fun Duration.format(): TextData {

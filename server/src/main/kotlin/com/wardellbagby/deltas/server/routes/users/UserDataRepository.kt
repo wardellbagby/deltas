@@ -39,7 +39,7 @@ class UserDataRepository(
   suspend fun setUserData(id: String, data: UserData): Result<Unit> {
     return database.collection("users")
       .document(id)
-      .setCatching(data)
+      .setCatching(data.normalize())
       .map { }
       .onSuccess {
         cache[id] = data.withId(id)
@@ -79,6 +79,12 @@ class UserDataRepository(
   private fun getUserDataReference(id: String): DocumentReference {
     return userCollection.document(id)
   }
+
+  private fun UserData.normalize(): UserData = copy(
+    messageToken = messageToken,
+    followedTrackers = followedTrackers?.distinct(),
+    createdTrackers = createdTrackers?.distinct()
+  )
 }
 
 suspend fun UserDataRepository.getUserData(record: UserRecord) =

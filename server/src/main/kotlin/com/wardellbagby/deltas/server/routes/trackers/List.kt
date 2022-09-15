@@ -1,7 +1,6 @@
 package com.wardellbagby.deltas.server.routes.trackers
 
 import com.google.cloud.firestore.DocumentSnapshot
-import com.google.cloud.firestore.Query.Direction.DESCENDING
 import com.google.firebase.auth.UserRecord
 import com.wardellbagby.deltas.models.trackers.ListTrackersRequest
 import com.wardellbagby.deltas.models.trackers.ListTrackersResponse
@@ -9,78 +8,74 @@ import com.wardellbagby.deltas.models.trackers.TrackerDTO
 import com.wardellbagby.deltas.server.firebase.ValueWithId
 import com.wardellbagby.deltas.server.firebase.awaitCatching
 import com.wardellbagby.deltas.server.firebase.database
-import com.wardellbagby.deltas.server.firebase.getOrEmpty
-import com.wardellbagby.deltas.server.firebase.getOrNull
-import com.wardellbagby.deltas.server.helpers.combine
-import com.wardellbagby.deltas.server.helpers.failIfNull
 import com.wardellbagby.deltas.server.helpers.flatMap
-import com.wardellbagby.deltas.server.helpers.getFollowedTrackers
 import com.wardellbagby.deltas.server.logger
 import com.wardellbagby.deltas.server.model.ServerTracker
 import com.wardellbagby.deltas.server.model.toDTO
 import com.wardellbagby.deltas.server.routes.getUser
 import com.wardellbagby.deltas.server.routes.safeReceive
+import com.wardellbagby.deltas.server.routes.users.UserDataRepository
+import com.wardellbagby.deltas.server.routes.users.getUserData
 import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
+import org.koin.ktor.ext.inject
 
 private suspend fun UserRecord.getSelfTrackers(
+  trackersRepository: TrackersRepository,
+  userDataRepository: UserDataRepository,
   cursorSnapshot: DocumentSnapshot?,
   limit: Int
 ): Result<List<ValueWithId<ServerTracker>>> {
-  return database.collection("trackers")
-    .orderBy("timestamp", DESCENDING)
-    .whereEqualTo("creator", uid)
-    .let {
-      if (cursorSnapshot != null) {
-        it.startAfter(cursorSnapshot)
-      } else {
-        it
-      }
+  val cursorId = cursorSnapshot?.id
+
+  return userDataRepository.getUserData(this)
+    .flatMap { trackersRepository.getTrackers(it?.createdTrackers.orEmpty()) }
+    .map {
+      it
+        .sortedByDescending { (_, value) -> value.timestamp }
+        .let { trackers ->
+          if (cursorId != null) {
+            val cursorIndex = trackers.indexOfFirst { tracker -> tracker.id == cursorId }
+            trackers.drop(cursorIndex + 1)
+          } else {
+            trackers
+          }
+        }
+        .take(limit)
     }
-    .limit(limit)
-    .getOrEmpty()
 }
 
 private suspend fun UserRecord.getOtherTrackers(
+  trackersRepository: TrackersRepository,
+  userDataRepository: UserDataRepository,
   cursorSnapshot: DocumentSnapshot?,
   limit: Int
 ): Result<List<ValueWithId<ServerTracker>>> {
-  val followedTrackers = getFollowedTrackers()
-
   val cursorId = cursorSnapshot?.id
 
-  // Firestore is...very annoying and doesn't allow us to both sort a query by creator and timestamp
-  // AND enforce that every item returns matches an ID. Yes, very annoying I know. So instead, we do
-  // this extremely optimal thing by getting every single tracker the user is following and doing
-  // the sorting and filtering ourselves. I hate Firestore.
-  return database.getAll(*followedTrackers.toTypedArray())
-    .awaitCatching()
-    .flatMap { snapshots ->
-      snapshots
-        .map { snapshot ->
-          snapshot.reference.getOrNull<ServerTracker>().failIfNull()
-        }
-        .combine()
-        .map { otherTrackers ->
-          otherTrackers
-            .sortedWith(
-              compareBy(
-                { it.value.creator },
-                { it.value.timestamp }
-              )
-            )
-        }
-        .map {
-          val result = if (cursorId != null) {
-            val cursorIndex = it.indexOfFirst { tracker -> tracker.id == cursorId }
-            it.drop(cursorIndex + 1)
-          } else {
-            it
+  return userDataRepository.getUserData(this)
+    .flatMap { trackersRepository.getTrackers(it?.followedTrackers.orEmpty()) }
+    .map { trackers ->
+      trackers
+        .sortedWith(
+          compareBy<ValueWithId<ServerTracker>> {
+            it.value.creator
           }
-          result.take(limit)
-        }
+            .thenByDescending {
+              it.value.timestamp
+            }
+        )
+    }
+    .map {
+      val result = if (cursorId != null) {
+        val cursorIndex = it.indexOfFirst { tracker -> tracker.id == cursorId }
+        it.drop(cursorIndex + 1)
+      } else {
+        it
+      }
+      result.take(limit)
     }
 }
 
@@ -104,6 +99,9 @@ fun Route.listTrackers() = post("/list") {
   val body = call.safeReceive<ListTrackersRequest>() ?: return@post
   val limit = minOf(body.limit ?: 20, 20)
 
+  val trackersRepository: TrackersRepository by this@listTrackers.inject()
+  val userDataRepository: UserDataRepository by this@listTrackers.inject()
+
   val cursorSnapshot = body.cursor?.let {
     database.collection("trackers")
       .document(it.asDocumentId)
@@ -114,6 +112,8 @@ fun Route.listTrackers() = post("/list") {
 
   val selfTrackers = if (body.cursor.isSelfTrackerCursor) {
     user.getSelfTrackers(
+      trackersRepository = trackersRepository,
+      userDataRepository = userDataRepository,
       cursorSnapshot = cursorSnapshot,
       limit = limit
     )
@@ -123,6 +123,8 @@ fun Route.listTrackers() = post("/list") {
   val otherTrackers = selfTrackers.flatMap {
     if (it.size < limit) {
       user.getOtherTrackers(
+        trackersRepository = trackersRepository,
+        userDataRepository = userDataRepository,
         cursorSnapshot = cursorSnapshot.takeIf { body.cursor.isSharedTrackerCursor },
         limit = limit - it.size
       )

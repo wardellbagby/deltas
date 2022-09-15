@@ -13,7 +13,9 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
+import org.koin.ktor.plugin.Koin
 import java.nio.file.Path
 import kotlin.io.path.inputStream
 
@@ -32,6 +34,9 @@ fun main() {
   )
 
   embeddedServer(CIO, port = port) {
+    install(Koin) {
+      modules(createMainModule(CoroutineScope(coroutineContext)))
+    }
     install(ContentNegotiation) {
       json(Json { ignoreUnknownKeys = true })
     }

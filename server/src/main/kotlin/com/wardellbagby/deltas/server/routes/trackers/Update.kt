@@ -1,19 +1,13 @@
 package com.wardellbagby.deltas.server.routes.trackers
 
-import com.google.cloud.firestore.DocumentReference
-import com.google.cloud.firestore.FieldValue.arrayRemove
-import com.google.cloud.firestore.FieldValue.arrayUnion
-import com.google.cloud.firestore.SetOptions
 import com.wardellbagby.deltas.models.DefaultServerResponse
 import com.wardellbagby.deltas.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.deltas.models.trackers.TrackerType.Incremental
 import com.wardellbagby.deltas.models.trackers.UpdateTrackerRequest
 import com.wardellbagby.deltas.server.firebase.auth
-import com.wardellbagby.deltas.server.firebase.awaitCatching
-import com.wardellbagby.deltas.server.firebase.database
-import com.wardellbagby.deltas.server.firebase.getOrNull
-import com.wardellbagby.deltas.server.firebase.setCatching
 import com.wardellbagby.deltas.server.firebase.validateUIDs
+import com.wardellbagby.deltas.server.helpers.combine
+import com.wardellbagby.deltas.server.helpers.failIfNull
 import com.wardellbagby.deltas.server.helpers.flatMap
 import com.wardellbagby.deltas.server.helpers.pushTrackerHistoryUpdate
 import com.wardellbagby.deltas.server.helpers.sendTrackerUpdateNotifications
@@ -24,6 +18,7 @@ import com.wardellbagby.deltas.server.model.IncrementalTracker
 import com.wardellbagby.deltas.server.model.ServerTracker
 import com.wardellbagby.deltas.server.routes.getUser
 import com.wardellbagby.deltas.server.routes.safeReceive
+import com.wardellbagby.deltas.server.routes.users.UserDataRepository
 import com.wardellbagby.deltas.utils.nullIfBlank
 import com.wardellbagby.deltas.utils.nullIfEmpty
 import io.ktor.server.application.call
@@ -31,6 +26,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import kotlinx.datetime.Clock
+import org.koin.ktor.ext.inject
 
 private val defaultErrorResponse = DefaultServerResponse(
   success = false,
@@ -46,12 +42,13 @@ fun Route.updateTrackers() = post("/update") {
   val user = call.getUser() ?: return@post
   val body = call.safeReceive<UpdateTrackerRequest>() ?: return@post
 
-  val trackerRef = database
-    .collection("trackers")
-    .document(body.id)
+  val trackersRepository: TrackersRepository by this@updateTrackers.inject()
+  val userDataRepository: UserDataRepository by this@updateTrackers.inject()
 
-  val tracker = trackerRef.getOrNull<ServerTracker>()
-    .mapCatching { it!! }
+  val trackerId = body.id
+
+  val tracker = trackersRepository.getTracker(trackerId)
+    .failIfNull()
     .onFailure {
       call.respond(defaultErrorResponse)
       return@post
@@ -116,19 +113,20 @@ fun Route.updateTrackers() = post("/update") {
     }
   }
 
-  trackerRef
-    .setCatching(updatedTracker)
+  trackersRepository.updateTracker(trackerId, updatedTracker)
     .flatMap {
       updateCreatedTracker(
         selfId = user.uid,
-        trackerRef = trackerRef
+        trackerId = trackerId,
+        userDataRepository = userDataRepository
       )
     }
     .flatMap {
       updateSharedTracker(
         old = tracker,
         new = updatedTracker,
-        trackerRef = trackerRef
+        trackerId = trackerId,
+        userDataRepository = userDataRepository
       )
     }
     .fold(
@@ -142,9 +140,12 @@ fun Route.updateTrackers() = post("/update") {
     )
 
   if (body.shouldResetTime || body.shouldIncrementCount) {
-    sendTrackerUpdateNotifications(body.id)
+    sendTrackerUpdateNotifications(
+      trackersRepository = trackersRepository,
+      trackerId = trackerId
+    )
     pushTrackerHistoryUpdate(
-      trackerId = body.id,
+      trackerId = trackerId,
       oldTracker = tracker,
       newTracker = updatedTracker,
       label = body.label?.nullIfBlank()
@@ -154,21 +155,19 @@ fun Route.updateTrackers() = post("/update") {
 
 private suspend fun updateCreatedTracker(
   selfId: String,
-  trackerRef: DocumentReference
+  trackerId: String,
+  userDataRepository: UserDataRepository
 ): Result<Unit> {
-  return database.collection("users")
-    .document(selfId)
-    .set(mapOf("createdTrackers" to arrayUnion(trackerRef)), SetOptions.merge())
-    .awaitCatching()
-    .map {
-      println(it)
-    }
+  return userDataRepository.updateUserData(selfId) {
+    copy(createdTrackers = createdTrackers.orEmpty() + trackerId)
+  }
 }
 
 private suspend fun updateSharedTracker(
   old: ServerTracker,
   new: ServerTracker,
-  trackerRef: DocumentReference,
+  trackerId: String,
+  userDataRepository: UserDataRepository
 ): Result<Unit> {
   val oldVisibleTo = old.visibleTo.orEmpty().toSet()
   val newVisibleTo = new.visibleTo.orEmpty().toSet()
@@ -180,22 +179,17 @@ private suspend fun updateSharedTracker(
   val newlyVisibleTo = newVisibleTo - oldVisibleTo
   val notVisibleTo = oldVisibleTo - newlyVisibleTo
 
-  val writer = database.bulkWriter()
-  newlyVisibleTo.forEach { userId ->
-    writer.set(
-      database.collection("users").document(userId),
-      mapOf("followedTrackers" to arrayUnion(trackerRef)),
-      SetOptions.merge()
-    )
+  val addedResults = newlyVisibleTo.map { userId ->
+    userDataRepository.updateUserData(userId) {
+      copy(followedTrackers = followedTrackers.orEmpty() + trackerId)
+    }
   }
 
-  notVisibleTo.forEach { userId ->
-    writer.set(
-      database.collection("users").document(userId),
-      mapOf("followedTrackers" to arrayRemove(trackerRef)),
-      SetOptions.merge()
-    )
+  val removedResults = notVisibleTo.map { userId ->
+    userDataRepository.updateUserData(userId) {
+      copy(followedTrackers = followedTrackers.orEmpty().filter { it == trackerId })
+    }
   }
 
-  return writer.flush().awaitCatching().map { }
+  return (addedResults + removedResults).combine().map { }
 }

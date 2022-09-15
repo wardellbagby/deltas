@@ -46,6 +46,8 @@ object Dependencies {
   // Ktor
   const val ktorServerVersion = "2.1.0"
 
+  const val koinVersion = "3.2.1"
+
   const val AndroidGradlePlugin = "com.android.tools.build:gradle:$agpVersion"
   const val KotlinGradlePlugin = "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
   const val KtlintGradlePlugin = "org.jlleitschuh.gradle:ktlint-gradle:$ktlintGradleVersion"
@@ -56,6 +58,8 @@ object Dependencies {
   const val HiltCompiler = "com.google.dagger:hilt-compiler:$hiltVersion"
   const val HiltAndroid = "com.google.dagger:hilt-android:$hiltVersion"
   const val HiltGradlePlugin = "com.google.dagger:hilt-android-gradle-plugin:$hiltVersion"
+
+  const val Koin = "io.insert-koin:koin-core:$koinVersion"
 
   const val RecyclerView = "androidx.recyclerview:recyclerview:$recyclerViewVersion"
   const val Appcompat = "androidx.appcompat:appcompat:$appcompatVersion"
@@ -97,6 +101,7 @@ object Dependencies {
   const val KtorContentNegotion = "io.ktor:ktor-server-content-negotiation:$ktorServerVersion"
   const val KtorSerializationJson = "io.ktor:ktor-serialization-kotlinx-json:$ktorServerVersion"
   const val KtorLogging = "io.ktor:ktor-server-call-logging:$ktorServerVersion"
+  const val KoinKtor = "io.insert-koin:koin-ktor:$koinVersion"
   const val LogbackClassic = "ch.qos.logback:logback-classic:1.2.11"
 }
 

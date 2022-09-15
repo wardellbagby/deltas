@@ -37,6 +37,7 @@ suspend fun pushTrackerHistoryUpdate(
       .document(trackerId)
       .collection("history")
       .push(it)
+      .map { }
   }
   .onFailure {
     logger.error("Failed to push tracker update", it)

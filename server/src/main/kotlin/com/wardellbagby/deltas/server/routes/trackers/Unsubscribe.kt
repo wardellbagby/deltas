@@ -1,31 +1,28 @@
 package com.wardellbagby.deltas.server.routes.trackers
 
-import com.google.cloud.firestore.FieldValue.arrayRemove
 import com.wardellbagby.deltas.models.DefaultServerResponse
 import com.wardellbagby.deltas.models.trackers.TrackerVisibility.Private
 import com.wardellbagby.deltas.models.trackers.UnsubscribeTrackerRequest
-import com.wardellbagby.deltas.server.firebase.awaitCatching
-import com.wardellbagby.deltas.server.firebase.database
-import com.wardellbagby.deltas.server.firebase.getOrNull
 import com.wardellbagby.deltas.server.helpers.failIfNull
-import com.wardellbagby.deltas.server.helpers.flatMap
-import com.wardellbagby.deltas.server.helpers.removeFollowedTracker
-import com.wardellbagby.deltas.server.model.ServerTracker
 import com.wardellbagby.deltas.server.routes.getUser
 import com.wardellbagby.deltas.server.routes.safeReceive
+import com.wardellbagby.deltas.server.routes.users.UserDataRepository
+import com.wardellbagby.deltas.server.routes.users.updateUserData
+import com.wardellbagby.deltas.utils.nullIfEmpty
 import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
+import org.koin.ktor.ext.inject
 
 fun Route.unsubscribeTracker() = post("/unsubscribe") {
   val user = call.getUser() ?: return@post
   val body = call.safeReceive<UnsubscribeTrackerRequest>() ?: return@post
 
-  val trackerRef = database.collection("trackers")
-    .document(body.id)
-  val tracker = trackerRef
-    .getOrNull<ServerTracker>()
+  val trackersRepository: TrackersRepository by this@unsubscribeTracker.inject()
+  val userDataRepository: UserDataRepository by this@unsubscribeTracker.inject()
+
+  val tracker = trackersRepository.getTracker(body.id)
     .failIfNull()
     .fold(
       onSuccess = { it.value },
@@ -42,19 +39,22 @@ fun Route.unsubscribeTracker() = post("/unsubscribe") {
       return@post
     }
 
-    trackerRef
-      .update("visibleTo", arrayRemove(user.uid))
-      .awaitCatching()
-      .flatMap {
-        database.collection("users")
-          .document(user.uid)
-          .set(mapOf("followedTrackers" to arrayRemove(body.id)))
-          .awaitCatching()
+    trackersRepository.updateTracker(
+      id = body.id,
+      value = tracker.copy(
+        visibleTo = trackerSubscribers.filter { it == user.uid }.nullIfEmpty()
+      )
+    )
+      .onFailure {
+        call.respond(DefaultServerResponse(success = false))
       }
-      .onFailure { call.respond(DefaultServerResponse(success = false)) }
   }
 
-  user.removeFollowedTracker(trackerRef)
+  userDataRepository.updateUserData(user) {
+    copy(
+      followedTrackers = followedTrackers.orEmpty().filter { it == body.id }
+    )
+  }
     .fold(
       onSuccess = { call.respond(DefaultServerResponse(success = true)) },
       onFailure = { call.respond(DefaultServerResponse(success = false)) }

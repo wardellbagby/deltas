@@ -26,7 +26,7 @@ fun <T> Result<T?>.failIfNull(): Result<T> {
   }
 }
 
-fun  Result<DocumentSnapshot>.failIfDoesNotExist(): Result<DocumentSnapshot> {
+fun Result<DocumentSnapshot>.failIfDoesNotExist(): Result<DocumentSnapshot> {
   return flatMap {
     if (!it.exists()) {
       Result.failure(Exception("Snapshot does not exist"))

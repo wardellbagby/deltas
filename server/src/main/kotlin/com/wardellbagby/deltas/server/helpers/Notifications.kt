@@ -8,9 +8,9 @@ import com.wardellbagby.deltas.models.trackers.TrackerType.Elapsed
 import com.wardellbagby.deltas.models.trackers.TrackerType.Incremental
 import com.wardellbagby.deltas.server.firebase.awaitCatching
 import com.wardellbagby.deltas.server.firebase.database
-import com.wardellbagby.deltas.server.firebase.getOrNull
 import com.wardellbagby.deltas.server.firebase.messaging
 import com.wardellbagby.deltas.server.model.ServerTracker
+import com.wardellbagby.deltas.server.routes.trackers.TrackersRepository
 
 private fun ServerTracker.toMulticastMessage(
   trackerId: String,
@@ -41,10 +41,11 @@ private fun ServerTracker.toMulticastMessage(
     .build()
 }
 
-suspend fun sendTrackerUpdateNotifications(trackerId: String): Result<Unit> {
-  val trackerRef = database.collection("trackers").document(trackerId)
-  val tracker = trackerRef
-    .getOrNull<ServerTracker>()
+suspend fun sendTrackerUpdateNotifications(
+  trackersRepository: TrackersRepository,
+  trackerId: String
+): Result<Unit> {
+  val tracker = trackersRepository.getTracker(trackerId)
     .failIfNull()
     .onFailure {
       return Result.failure(it)
@@ -53,7 +54,7 @@ suspend fun sendTrackerUpdateNotifications(trackerId: String): Result<Unit> {
     .value
 
   return database.collection("users")
-    .whereArrayContains("followedTrackers", trackerRef)
+    .whereArrayContains("followedTrackers", trackerId)
     .get()
     .awaitCatching()
     .map { it.documents }

@@ -49,4 +49,6 @@ dependencies {
 
   implementation(Dependencies.FirebaseAdmin)
   implementation(Dependencies.GooglePlayServiceKtx)
+  implementation(Dependencies.Koin)
+  implementation(Dependencies.KoinKtor)
 }

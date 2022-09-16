@@ -1,10 +1,14 @@
 package com.wardellbagby.deltas.server.routes.users
 
 import com.google.cloud.firestore.DocumentReference
+import com.google.cloud.firestore.FieldValue.arrayRemove
+import com.google.cloud.firestore.SetOptions.merge
 import com.google.firebase.auth.UserRecord
 import com.wardellbagby.deltas.server.firebase.ValueWithId
 import com.wardellbagby.deltas.server.firebase.asResult
+import com.wardellbagby.deltas.server.firebase.awaitCatching
 import com.wardellbagby.deltas.server.firebase.database
+import com.wardellbagby.deltas.server.firebase.getOrEmpty
 import com.wardellbagby.deltas.server.firebase.getOrNull
 import com.wardellbagby.deltas.server.firebase.setCatching
 import com.wardellbagby.deltas.server.firebase.withId
@@ -74,6 +78,39 @@ class UserDataRepository(
         cache.remove(id)
       }
       .map { }
+  }
+
+  suspend fun removeTrackerFromUsers(trackerId: String): Result<Unit> {
+    val writer = database.bulkWriter()
+    val usersWhoCreatedTracker = userCollection
+      .whereArrayContains("createdTrackers", trackerId)
+      .getOrEmpty<UserData>()
+      .onFailure { return Result.failure(it) }
+      .getOrThrow()
+
+    usersWhoCreatedTracker.forEach {
+      writer.set(
+        getUserDataReference(it.id),
+        mapOf("createdTrackers" to arrayRemove(trackerId)),
+        merge()
+      )
+    }
+
+    val usersWhoFollowTracker = userCollection
+      .whereArrayContains("followedTrackers", trackerId)
+      .getOrEmpty<UserData>()
+      .onFailure { return Result.failure(it) }
+      .getOrThrow()
+
+    usersWhoFollowTracker.forEach {
+      writer.set(
+        getUserDataReference(it.id),
+        mapOf("followedTrackers" to arrayRemove(trackerId)),
+        merge()
+      )
+    }
+
+    return writer.flush().awaitCatching().map { }
   }
 
   private fun getUserDataReference(id: String): DocumentReference {

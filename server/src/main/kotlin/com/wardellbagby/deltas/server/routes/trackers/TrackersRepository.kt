@@ -57,9 +57,10 @@ class TrackersRepository(
       .awaitCatching()
       .flatMap { snapshots ->
         snapshots
-          .mapNotNull { snapshot ->
-            snapshot.getOrNull<ServerTracker>().failIfNull()
-          }
+          .map { it.getOrNull<ServerTracker>() }
+          // Filter out any trackers that we successfully retrieved but didn't exist
+          .filter { it.isFailure || (it.isSuccess && it.getOrNull() != null) }
+          .map { it.failIfNull() }
           .combine()
       }
       .fold(

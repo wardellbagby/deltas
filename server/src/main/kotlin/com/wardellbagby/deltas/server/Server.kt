@@ -14,12 +14,13 @@ import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.koin.ktor.plugin.Koin
 import java.nio.file.Path
 import kotlin.io.path.inputStream
 
-fun main() {
+@OptIn(ExperimentalSerializationApi::class) fun main() {
   val credentialsStream = System.getenv("TRACKS_SERVER_GOOGLE_APPLICATION_CREDENTIALS")
     ?.let { Path.of(it) }
     ?.inputStream()
@@ -38,7 +39,12 @@ fun main() {
       modules(createMainModule(CoroutineScope(coroutineContext)))
     }
     install(ContentNegotiation) {
-      json(Json { ignoreUnknownKeys = true })
+      json(
+        Json {
+          ignoreUnknownKeys = true
+          explicitNulls = false
+        }
+      )
     }
     install(CallLogging)
 

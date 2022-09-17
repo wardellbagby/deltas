@@ -4,6 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ListTrackersRequest(
-  val cursor: String?,
+  val cursor: String? = null,
   val limit: Int? = null
 )

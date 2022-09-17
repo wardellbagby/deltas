@@ -95,7 +95,6 @@ fun Route.listHistory() = post("/list") {
             cursor = histories.lastOrNull()?.id
           )
         )
-        finish()
         return@post
       },
       onFailure = {

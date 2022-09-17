@@ -25,10 +25,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 @Module
 object NetworkModule {
+  @OptIn(ExperimentalSerializationApi::class)
   @Provides
   @Singleton
   fun provideJson(): Json = Json {
     ignoreUnknownKeys = true
+    explicitNulls = false
   }
 
   @Provides

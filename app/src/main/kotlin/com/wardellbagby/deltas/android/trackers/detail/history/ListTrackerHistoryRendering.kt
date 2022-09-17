@@ -60,7 +60,11 @@ data class ListTrackerHistoryRendering(
   override fun LazyListScope.contributeItems(viewEnvironment: ViewEnvironment) {
     when (phase) {
       is Failure -> item {
-        FailureScreen(message = phase.message.asTextData())
+        WorkflowRendering(
+          FailureScreen(message = phase.message.asTextData()),
+          viewEnvironment,
+          modifier = Modifier.padding(12.dp)
+        )
       }
 
       is Loaded -> {

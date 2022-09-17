@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ListHistoryRequest(
   val trackerId: String,
-  val cursor: String?,
+  val cursor: String? = null,
   val limit: Int? = null
 )
 
@@ -24,7 +24,7 @@ data class HistoryDTO(
 @Serializable
 data class ListHistoryResponse(
   val history: List<HistoryDTO>,
-  val cursor: String?,
+  val cursor: String? = null,
   override val success: Boolean = true,
   override val errorDetailMessage: String? = null
 ) : ServerResponse

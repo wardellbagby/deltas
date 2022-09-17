@@ -11,7 +11,7 @@ application {
 
 ktor {
   fatJar {
-    archiveFileName.set("tracks-server-${AppVersion.versionName}.jar")
+    archiveFileName.set("tracks-server.jar")
   }
 }
 

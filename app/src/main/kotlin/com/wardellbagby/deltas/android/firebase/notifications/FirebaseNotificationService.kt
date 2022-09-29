@@ -1,5 +1,6 @@
 package com.wardellbagby.deltas.android.firebase.notifications
 
+import android.content.Intent
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.BuildConfig
@@ -15,7 +16,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,6 +31,39 @@ class FirebaseNotificationService : FirebaseMessagingService() {
 
   @Inject
   lateinit var remoteTrackerChangesRepository: RemoteTrackerChangesRepository
+
+  override fun getStartCommandIntent(originalIntent: Intent): Intent {
+    if (originalIntent.isSupported()) {
+      return originalIntent
+    }
+    return super.getStartCommandIntent(originalIntent)
+  }
+
+  override fun handleIntent(intent: Intent) {
+    when (intent.action) {
+      AUTHENTICATION_CHANGED_ACTION -> onAuthenticationChanged()
+      else -> super.handleIntent(intent)
+    }
+
+    // FirebaseMessagingService uses executors (which are backed by threads) to launch everything,
+    // and it expects anything handling an intent to just block the thread until it's done. This
+    // lets us do that thread blocking (so that the service isn't destroyed prematurely because
+    // FirebaseMessagingService thinks we're done working) while still using coroutines (mostly) as
+    // normal. This also still allows the OS to kill the service while letting the coroutines
+    // gracefully cancel.
+    runBlocking {
+      scope.coroutineContext.job.join()
+    }
+  }
+
+  private fun onAuthenticationChanged() {
+    FirebaseAuth.getInstance().currentUser ?: return
+
+    scope.launch {
+      val token = FirebaseMessaging.getInstance().token.await()
+      onNewToken(token)
+    }
+  }
 
   override fun onNewToken(token: String) {
     super.onNewToken(token)
@@ -63,5 +100,13 @@ class FirebaseNotificationService : FirebaseMessagingService() {
   override fun onDestroy() {
     super.onDestroy()
     scope.cancel()
+  }
+
+  private fun Intent.isSupported(): Boolean {
+    return action == AUTHENTICATION_CHANGED_ACTION
+  }
+
+  companion object {
+    const val AUTHENTICATION_CHANGED_ACTION = "${BuildConfig.APPLICATION_ID}.intent.AUTH_CHANGED"
   }
 }

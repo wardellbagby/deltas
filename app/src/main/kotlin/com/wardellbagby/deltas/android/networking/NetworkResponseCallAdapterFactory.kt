@@ -23,7 +23,8 @@ sealed interface NetworkResult<out T> {
 }
 
 class UnknownNetworkingFailureException(
-  override val message: String? = null
+  override val message: String? = null,
+  override val cause: Throwable? = null
 ) : Exception()
 
 fun <T> NetworkResult<T>.asFailureWhen(condition: (T) -> Boolean): NetworkResult<T> {
@@ -53,7 +54,10 @@ fun <T, R> NetworkResult<T>.mapResponse(mapper: (T) -> R): NetworkResult<R> {
 }
 
 fun <T> Response<T>.errorMessage(call: Call<T>): String =
-  "${code()} ${message()} - ${call.request().url()}"
+  "${code()} ${message()} - ${call.errorMessage()}"
+
+fun <T> Call<T>.errorMessage(): String =
+  "${request().url()}"
 
 private class NetworkResultCall<T>(
   private val delegate: Call<T>,
@@ -95,7 +99,14 @@ private class NetworkResultCall<T>(
       }
 
       override fun onFailure(call: Call<T>, throwable: Throwable) {
-        Log.e("NetworkResponse", "Network failure", throwable)
+        Log.e(
+          "NetworkResponse",
+          "Network failure",
+          UnknownNetworkingFailureException(
+            message = call.errorMessage(),
+            cause = throwable
+          )
+        )
         callback.onResponse(
           this@NetworkResultCall,
           Response.success(Failure(message = null))

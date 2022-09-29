@@ -1,9 +1,12 @@
 package com.wardellbagby.deltas.android.auth
 
+import android.content.Context
+import android.content.Intent
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuth.AuthStateListener
-import com.google.firebase.messaging.FirebaseMessaging
 import com.squareup.workflow1.Worker
+import com.wardellbagby.deltas.android.firebase.notifications.FirebaseNotificationService
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -13,7 +16,9 @@ import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
 class AuthenticationChangesWorker
-@Inject constructor() : Worker<Boolean> {
+@Inject constructor(
+  @ApplicationContext private val context: Context
+) : Worker<Boolean> {
   override fun run(): Flow<Boolean> {
     return callbackFlow {
       val listener = AuthStateListener {
@@ -24,8 +29,11 @@ class AuthenticationChangesWorker
     }
       .onEach {
         if (it != null) {
-          // Fires off a request to make a new token, but will be handled by the Firebase service
-          FirebaseMessaging.getInstance().token
+          context.startService(
+            Intent(context, FirebaseNotificationService::class.java)
+              .apply {
+                action = FirebaseNotificationService.AUTHENTICATION_CHANGED_ACTION
+              })
         }
       }
       .map { it != null }

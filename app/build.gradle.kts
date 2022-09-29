@@ -24,7 +24,7 @@ android {
     minSdk = 21
     targetSdk = 33
     versionName = AppVersion.versionName
-    versionCode = 4
+    versionCode = 5
 
     fun buildConstant(name: String, value: String) {
       manifestPlaceholders[name] = value
